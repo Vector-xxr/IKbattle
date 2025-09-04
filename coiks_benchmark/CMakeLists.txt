@@ -160,6 +160,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(coiks_benchmark src/benchmark.cpp)
+add_executable(coiks_benchmark_path src/benchmark_path.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -173,6 +174,14 @@ add_executable(coiks_benchmark src/benchmark.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(coiks_benchmark
+  ${catkin_LIBRARIES}
+  pinocchio::pinocchio 
+  ${coiks_LIBRARIES}
+  ${pkg_nlopt_LIBRARIES}
+  casadi
+)
+
+target_link_libraries(coiks_benchmark_path
   ${catkin_LIBRARIES}
   pinocchio::pinocchio 
   ${coiks_LIBRARIES}
