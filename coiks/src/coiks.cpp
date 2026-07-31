@@ -64,7 +64,7 @@ namespace coiks
     if (solver3_.joinable())
       solver3_.join();
 
-    std::cout << "COIKS closed" << std::endl;
+    std::cout << "COIKS 已关闭" << std::endl;
   }
 
   int COIKS::IkSolve(const VectorXd q_init, const pin::SE3 &x_des,
@@ -76,7 +76,7 @@ namespace coiks
     solutionSet->clearSolutions();
 
     if (solver_opts_.verb_level_ >= 2)
-      std::cout << "[COIKS] Solving IK with " << ik_solver_name_ << std::endl;
+      std::cout << "[COIKS] 使用求解器求解 IK: " << ik_solver_name_ << std::endl;
     start_iksolve_time_ = std::chrono::high_resolution_clock::now();
     auto start_cb_time = std::chrono::high_resolution_clock::now();
 
@@ -133,11 +133,10 @@ namespace coiks
 
     if (solver_opts_.verb_level_ >= 2)
     {
-      std::cout << "[CODCS-IK] Time IK [us]: " << duration_cb.count() << " usec"
-                << std::endl;
-      std::cout << "[CODCS-IK] Solution found: " << q_sol.transpose()
-                << std::endl;
-      std::cout << "[CODCS-IK] Solution found (deg): "
+      std::cout << "[CODCS-IK] IK 耗时 [微秒]: " << duration_cb.count()
+                << " 微秒" << std::endl;
+      std::cout << "[CODCS-IK] 找到解: " << q_sol.transpose() << std::endl;
+      std::cout << "[CODCS-IK] 找到解（度）: "
                 << q_sol.transpose() * (180 / M_PI) << std::endl;
     }
 
@@ -258,7 +257,7 @@ namespace coiks
     }
     else
     {
-      std::cout << "No IK solver found" << std::endl;
+      std::cout << "未找到 IK 求解器" << std::endl;
       return 1;
     }
 
@@ -305,21 +304,21 @@ namespace coiks
 
   void COIKS::printStatistics()
   {
-    std::cout << "Solutions found: " << q_solutions_.size() << std::endl;
+    std::cout << "找到解的数量: " << q_solutions_.size() << std::endl;
 
     std::cout << "TP"
-              << " found " << succ_sol_tp_ << " solutions" << std::endl;
+              << " 找到 " << succ_sol_tp_ << " 个解" << std::endl;
     std::cout << "NLO"
-              << " found " << succ_sol_nlo_ << " solutions" << std::endl;
+              << " 找到 " << succ_sol_nlo_ << " 个解" << std::endl;
     std::cout << "QP"
-              << " found " << succ_sol_qp_ << " solutions" << std::endl;
+              << " 找到 " << succ_sol_qp_ << " 个解" << std::endl;
   }
 
   bool COIKS::initialize()
   {
-    std::cout << "Initializing COIKS with Max. Error: " << max_error_
-              << " Max. Time:" << max_time_ << " Max. It.:" << max_iter_
-              << " Delta-T:" << dt_ << std::endl;
+    std::cout << "正在初始化 COIKS，最大误差: " << max_error_
+              << " 最大时间:" << max_time_ << " 最大迭代:" << max_iter_
+              << " 步长:" << dt_ << std::endl;
     //   Load the urdf model
     pin::urdf::buildModel(urdf_file_, model_);
     mdl_data_ = pin::Data(model_);
@@ -376,12 +375,12 @@ namespace coiks
       initialize_codcs_invj_multi(solver_opts_.invj_multi_n_solvers_);
     else
     {
-      std::cout << "No IK solver found. Using default: COIKS-INVJ" << std::endl;
+      std::cout << "未找到 IK 求解器，使用默认: COIKS-INVJ" << std::endl;
       invj_solver_.reset(new INVJ_IkSolver<INVJ_BASE>(
           model_, ee_id_, solver_opts_, max_time_, max_error_, max_iter_, dt_));
     }
 
-    std::cout << "COIKS initialized" << std::endl;
+    std::cout << "COIKS 初始化完成" << std::endl;
     initialized_ = true;
 
     unsigned int seed = 42; // Chosen seed value for reproducibility
@@ -435,7 +434,7 @@ namespace coiks
 
   bool COIKS::initialize_codcs_invj_multi(int n_solvers)
   {
-    std::cout << "Initializing " << n_solvers << " INVJ solvers" << std::endl;
+    std::cout << "正在初始化 " << n_solvers << " 个 INVJ 求解器" << std::endl;
     for (int i = 0; i < n_solvers; i++)
     {
       invj_multi_solvers_.push_back(std::make_unique<INVJ_IkSolver<INVJ_BASE>>(
@@ -448,16 +447,16 @@ namespace coiks
 
   bool COIKS::printModelInfo()
   {
-    std::cout << "\nPrinting Model Info \n-----------------------" << std::endl;
-    std::cout << "Number of Joints found in model: " << model_.njoints << "\n";
-    std::cout << "Model nq (positon states): " << model_.nq << "\n";
-    std::cout << "Model nv (velocity states): " << model_.nv << "\n";
-    std::cout << "Joints lower limits [rad]: "
+    std::cout << "\n打印模型信息 \n-----------------------" << std::endl;
+    std::cout << "模型中的关节数: " << model_.njoints << "\n";
+    std::cout << "模型 nq（位置状态）: " << model_.nq << "\n";
+    std::cout << "模型 nv（速度状态）: " << model_.nv << "\n";
+    std::cout << "关节下限 [弧度]: "
               << model_.lowerPositionLimit.transpose() << "\n";
-    std::cout << "Joints upper limits [rad]: "
+    std::cout << "关节上限 [弧度]: "
               << model_.upperPositionLimit.transpose() << "\n";
-    std::cout << "EE link name: " << ee_link_ << std::endl;
-    std::cout << "EE link frame id: " << ee_id_ << std::endl;
+    std::cout << "末端连杆名称: " << ee_link_ << std::endl;
+    std::cout << "末端连杆 frame id: " << ee_id_ << std::endl;
     return true;
   }
 
@@ -608,7 +607,7 @@ namespace coiks
 
       if (solver_opts_.verb_level_ >= 2)
       {
-        std::cout << "Time left: " << time_left << " s" << std::endl;
+        std::cout << "剩余时间: " << time_left << " 秒" << std::endl;
       }
       if (time_left <= 0)
       {
@@ -625,7 +624,7 @@ namespace coiks
       }
       else
       {
-        throw std::invalid_argument("Invalid solve_mode: " +
+        throw std::invalid_argument("无效的 solve_mode: " +
                                     solver_opts_.solve_mode_);
       }
 

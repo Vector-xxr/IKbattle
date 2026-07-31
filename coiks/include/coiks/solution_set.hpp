@@ -150,7 +150,7 @@ class IKSolutionSet
       }
       else
       {
-        throw std::runtime_error("Metric not found: " + metricName);
+        throw std::runtime_error("未找到指标: " + metricName);
       }
     }
     return values;
@@ -197,7 +197,7 @@ class IKSolutionSet
         configs.size() != elapsed_times.size() ||
         configs.size() != solver_ids.size())
     {
-      throw std::invalid_argument("Mismatch in input vector sizes");
+      throw std::invalid_argument("输入向量长度不匹配");
     }
     solutions.reserve(solutions.size() + configs.size());
     for (size_t i = 0; i < configs.size(); ++i)
@@ -242,7 +242,7 @@ class IKSolutionSet
 
             if (metricA == a.metrics.end() || metricB == b.metrics.end())
             {
-              throw std::runtime_error("Metric not found: " + metricName);
+              throw std::runtime_error("未找到指标: " + metricName);
             }
 
             if (goal == OptimizationGoal::Maximize)
@@ -259,7 +259,7 @@ class IKSolutionSet
     }
     catch (const std::exception &e)
     {
-      std::cout << "Exception caught in getBestSolution: " << e.what()
+      std::cout << "getBestSolution 捕获异常: " << e.what()
                 << std::endl;
       return {false, {}};
     }
@@ -271,31 +271,31 @@ class IKSolutionSet
 
     if (solutions.empty())
     {
-      out << "No solutions available." << std::endl;
+      out << "暂无可用解。" << std::endl;
       return;
     }
 
-    out << "Total solutions: " << solutions.size() << std::endl;
+    out << "解的总数: " << solutions.size() << std::endl;
     out << std::string(50, '-') << std::endl;
 
     for (size_t i = 0; i < solutions.size(); ++i)
     {
       const auto &solution = solutions[i];
 
-      out << "Solution " << i + 1 << ":" << std::endl;
-      out << "Configuration: " << solution.configuration.transpose()
+      out << "解 " << i + 1 << ":" << std::endl;
+      out << "关节配置: " << solution.configuration.transpose()
           << std::endl;
 
-      out << "Metrics:" << std::endl;
+      out << "指标:" << std::endl;
       for (const auto &metric : solution.metrics)
       {
         out << "  " << metric.first << ": " << metric.second << std::endl;
       }
 
-      out << "Elapsed time: " << solution.elapsed_time << " seconds"
+      out << "耗时: " << solution.elapsed_time << " 秒"
           << std::endl;
-      out << "Solver ID: " << solution.solver_id << std::endl;
-      out << "Solution ID: " << solution.solution_id << std::endl;
+      out << "求解器 ID: " << solution.solver_id << std::endl;
+      out << "解 ID: " << solution.solution_id << std::endl;
       out << std::string(50, '-') << std::endl;
     }
   }
@@ -311,7 +311,7 @@ class IKSolutionSet
       totalSolutions = solutions.size();
       if (totalSolutions == 0)
       {
-        out << "No solutions available." << std::endl;
+        out << "暂无可用解。" << std::endl;
         return;
       }
     }
@@ -320,7 +320,7 @@ class IKSolutionSet
 
     if (!bestSolutionPair.first)
     {
-      out << "No best solution found." << std::endl;
+      out << "未找到最优解。" << std::endl;
       return;
     }
 
@@ -330,31 +330,31 @@ class IKSolutionSet
 
     if (bestMetricIt == bestSolution.metrics.end())
     {
-      out << "Error: Best metric not found in solution." << std::endl;
+      out << "错误: 解中未找到最优指标。" << std::endl;
       return;
     }
 
     double bestMetricValue = bestMetricIt->second;
 
-    out << "Best Solution (based on " << metricName << ", "
-        << (goal == OptimizationGoal::Maximize ? "maximized" : "minimized")
-        << "):" << std::endl;
+    out << "最优解（基于 " << metricName << "，"
+        << (goal == OptimizationGoal::Maximize ? "最大化" : "最小化")
+        << "）:" << std::endl;
     out << std::string(50, '-') << std::endl;
 
-    out << "Total Solutions: " << totalSolutions << std::endl;
-    out << "Configuration: " << bestConfiguration.transpose() << std::endl;
+    out << "解的总数: " << totalSolutions << std::endl;
+    out << "关节配置: " << bestConfiguration.transpose() << std::endl;
 
-    out << "Metrics:" << std::endl;
+    out << "指标:" << std::endl;
     for (const auto &metric : bestSolution.metrics)
     {
       out << "  " << metric.first << ": " << metric.second << std::endl;
     }
-    out << "Elapsed time: " << bestSolution.elapsed_time << " seconds"
+    out << "耗时: " << bestSolution.elapsed_time << " 秒"
         << std::endl;
-    out << "Solver ID: " << bestSolution.solver_id << std::endl;
-    out << "Solution ID: " << bestSolution.solution_id << std::endl;
+    out << "求解器 ID: " << bestSolution.solver_id << std::endl;
+    out << "解 ID: " << bestSolution.solution_id << std::endl;
 
-    out << metricName << " value: " << bestMetricValue << std::endl;
+    out << metricName << " 值: " << bestMetricValue << std::endl;
     out << std::string(50, '-') << std::endl;
   }
 };

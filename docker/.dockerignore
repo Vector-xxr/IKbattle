@@ -1,0 +1,8 @@
+.git
+.gitignore
+**/build
+**/devel
+**/logs
+**/.vscode
+**/*.md
+LICENSE

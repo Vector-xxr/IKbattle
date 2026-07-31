@@ -34,6 +34,8 @@
 
 #include <coiks/solution_set.hpp>
 
+#include "experiment_output.hpp"
+
 using namespace coiks;
 namespace pin = pinocchio;
 
@@ -55,13 +57,13 @@ class BenchmarkTRACIK : public IkSolver
 
   bool initialize_tracik()
   {
-    std::cout << "Initializing TRACIK with Max. Error: " << max_error_
-              << " Max. Time:" << max_time_ << " Delta T:" << dt_ << std::endl;
+    std::cout << "正在初始化 TRACIK，最大误差: " << max_error_
+              << " 最大时间:" << max_time_ << " 时间步长:" << dt_ << std::endl;
 
     // Parsing URDF
     if (!kdl_parser::treeFromFile(urdf_file_, kdl_tree_))
     {
-      ROS_ERROR("Failed to construct kdl tree");
+      std::cerr << "[ERROR] " << "构建 KDL 树失败" << std::endl;
       return false;
     }
     bool exit_value = kdl_tree_.getChain(base_link_, ee_link_, kdl_chain_);
@@ -102,7 +104,7 @@ class BenchmarkTRACIK : public IkSolver
                                                 max_error_, TRAC_IK::Manip1));
     else
     {
-      ROS_WARN("Invalid solver mode. Using Speed mode");
+      std::cerr << "[WARN] " << "求解器模式无效，将使用速度模式" << std::endl;
       tracik_solver_.reset(new TRAC_IK::TRAC_IK(kdl_chain_, ll_, ul_, max_time_,
                                                 max_error_, TRAC_IK::Speed));
     }
@@ -112,7 +114,7 @@ class BenchmarkTRACIK : public IkSolver
     {
       nominal_(j) = (ll_(j) + ul_(j)) / 2.0;
     }
-    std::cout << "TRACIK initialized" << std::endl;
+    std::cout << "TRACIK 初始化完成" << std::endl;
 
     return true;
   }
@@ -180,9 +182,10 @@ class BenchmarkTRACIK : public IkSolver
   double dt_;
 };
 
-void solveIkPath(std::string urdf_file_, std::string qinit_file_, 
-                 std::string path_file_, int point_id, IkSolver *ik_solver, 
-                 std::string ee_link_, bool print_all = false, int robot_id = 0)
+void solveIkPath(std::string urdf_file_, std::string qinit_file_,
+                 std::string path_file_, int point_id, IkSolver *ik_solver,
+                 std::string ee_link_, bool print_all, int robot_id,
+                 const std::string &output_dir)
 {
   double                  total_time = 0;
   double                  total_time_it = 0;
@@ -205,8 +208,8 @@ void solveIkPath(std::string urdf_file_, std::string qinit_file_,
   n_joints_ = model_.nq;
   q_sol_.resize(n_joints_);
 
-  std::cout << "Solving IK path with " << ik_solver->get_solver_name() 
-            << " for robot " << robot_id << " for link " << ee_link_ << std::endl;
+  std::cout << "使用求解器求解 IK 路径: " << ik_solver->get_solver_name()
+            << "，机器人 " << robot_id << "，目标链接 " << ee_link_ << std::endl;
 
   std::vector<pin::SE3> xdes_list;
   VectorXd q_init(ik_solver->get_n_joints());
@@ -232,7 +235,7 @@ void solveIkPath(std::string urdf_file_, std::string qinit_file_,
     }
     qinit_file.close();
   } else {
-    std::cerr << "Unable to open file: " << qinit_file_ << std::endl;
+    std::cerr << "无法打开文件: " << qinit_file_ << std::endl;
     return;
   }
 
@@ -258,17 +261,21 @@ void solveIkPath(std::string urdf_file_, std::string qinit_file_,
       }
       path_file.close();
   } else {
-      std::cerr << "Unable to open file: " << path_file_ << std::endl;
+      std::cerr << "无法打开文件: " << path_file_ << std::endl;
       return;
   }
 
-  time_t currentTime;
-  struct tm *localTime;
-  time(&currentTime);
-  localTime = localtime(&currentTime);
-  
-  std::string filename = "/home/colan/" + ik_solver->get_solver_name() + "_path_r" + std::to_string(robot_id) + ".csv";
-  fout.open(filename, std::ios::out | std::ios::app);
+  const std::string csv_path = makeResultCsvPath(
+      output_dir, ik_solver->get_solver_name(), robot_id, "_path");
+  fout.open(csv_path, std::ios::out);
+  if (!fout.is_open())
+  {
+    std::cerr << "[ERROR] 无法打开结果文件: " << csv_path << std::endl;
+  }
+  else
+  {
+    std::cout << "[INFO] 结果写入: " << csv_path << std::endl;
+  }
   fout << "idx,res,time,solver_id,sol_id,error,q_init,q_sol\n";
 
   VectorXd q_seed = q_init;
@@ -310,11 +317,11 @@ void solveIkPath(std::string urdf_file_, std::string qinit_file_,
   total_time = duration_cb.count();
 
   std::cout << "------------------------------" << std::endl;
-  std::cout << "Summary for " << ik_solver->get_solver_name() << ":" << std::endl;
-  std::cout << "Success rate: " << 100.0 * n_success / xdes_list.size() << " %" << std::endl;
-  std::cout << "Average time per waypoint: " << total_time_it / xdes_list.size() << " us" << std::endl;
+  std::cout << ik_solver->get_solver_name() << " 的汇总:" << std::endl;
+  std::cout << "成功率: " << 100.0 * n_success / xdes_list.size() << " %" << std::endl;
+  std::cout << "每个路径点平均耗时: " << total_time_it / xdes_list.size() << " 微秒" << std::endl;
   if (n_success > 0) {
-    std::cout << "Average time for successful waypoints: " << success_time_it / n_success << " us" << std::endl;
+    std::cout << "成功路径点平均耗时: " << success_time_it / n_success << " 微秒" << std::endl;
   }
   std::cout << "------------------------------" << std::endl;
 
@@ -325,12 +332,12 @@ bool kill_process = false;
 void SigIntHandler(int signal)
 {
   kill_process = true;
-  ROS_INFO_STREAM("SHUTDOWN SIGNAL RECEIVED");
+  std::cout << "[INFO] " << "收到关闭信号" << std::endl;
 }
 
 int main(int argc, char **argv)
 {
-  ROS_INFO("Path Following Benchmark for COIKS and TRAC-IK");
+  std::cout << "[INFO] " << "COIKS 与 TRAC-IK 路径跟踪基准测试" << std::endl;
   ros::init(argc, argv, "coiks_benchmark_path");
   ros::NodeHandle nh;
   std::signal(SIGINT, SigIntHandler);
@@ -471,13 +478,13 @@ int main(int argc, char **argv)
     break;
 
   default:
-    ROS_ERROR("Kinematic Tree ID not recognized.");
+    std::cerr << "[ERROR] " << "无法识别运动学树 ID。" << std::endl;
     return -1;
   }
 
-  ROS_INFO_STREAM("Using URDF: " << urdf_path);
-  ROS_INFO_STREAM("Using qinit file: " << qinit_path);
-  ROS_INFO_STREAM("Using path file: " << path_file);
+  std::cout << "[INFO] " << "正在使用 URDF: " << urdf_path << std::endl;
+  std::cout << "[INFO] " << "正在使用 qinit 文件: " << qinit_path << std::endl;
+  std::cout << "[INFO] " << "正在使用路径文件: " << path_file << std::endl;
 
   SolverOptions so;
   nh.param<std::string>("solve_mode", so.solve_mode_, "speed");
@@ -509,17 +516,21 @@ int main(int argc, char **argv)
   nh.param<std::string>("solv_time_stats", so.time_stats_, "no");
   nh.param<int>("solv_verb_level", so.verb_level_, 0);
 
+  const std::string exp_dir =
+      createNextExperimentDir(pkg_path + "/output");
+  std::cout << "[INFO] 实验结果目录: " << exp_dir << std::endl;
+
   if (tracik_enable) {
-    ROS_INFO("Starting TRAC-IK");
+    std::cout << "[INFO] " << "正在启动 TRAC-IK" << std::endl;
     BenchmarkTRACIK trac_ik(urdf_path, "base_link", "link_ee", ik_solver_name, so.solve_mode_, max_time, max_error, max_iter, 1.0);
-    solveIkPath(urdf_path, qinit_path, path_file, point_id, &trac_ik, "link_ee", false, robot_id);
+    solveIkPath(urdf_path, qinit_path, path_file, point_id, &trac_ik, "link_ee", false, robot_id, exp_dir);
   }
 
-  ROS_INFO("Starting COIKS");
+  std::cout << "[INFO] " << "正在启动 COIKS" << std::endl;
   COIKS coiks(urdf_path, "base_link", "link_ee", ik_solver_name, so, max_time, max_error, max_iter, 1.0);
-  solveIkPath(urdf_path, qinit_path, path_file, point_id, &coiks, "link_ee", false, robot_id);
+  solveIkPath(urdf_path, qinit_path, path_file, point_id, &coiks, "link_ee", false, robot_id, exp_dir);
 
-  ROS_INFO("Benchmark finished");
+  std::cout << "[INFO] 基准测试完成。结果目录: " << exp_dir << std::endl;
 
   return 0;
 }

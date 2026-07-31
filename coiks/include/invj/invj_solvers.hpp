@@ -124,16 +124,16 @@ private:
     // Logging
     verb_level_ = so.verb_level_;
 
-    std::cout << "\n------\nINVJ " << id_ << " Options summary:" << std::endl;
-    std::cout << "Max. EE error: " << max_error_ << std::endl;
-    std::cout << "Coeff. Kee (EE error): " << Kee_ << std::endl;
-    std::cout << "Pinv method: " << pinv_method_ << std::endl;
-    std::cout << "Limiting method: " << limiting_method_ << std::endl;
-    std::cout << "Step size method: " << step_size_method_ << std::endl;
-    std::cout << "Seed method: " << seed_method_ << std::endl;
-    std::cout << "Error computation type: " << error_type_ << std::endl;
-    std::cout << "Verbosity Level: " << verb_level_ << std::endl;
-    std::cout << "Solver mode: " << solve_mode_ << std::endl;
+    std::cout << "\n------\nINVJ " << id_ << " 选项摘要:" << std::endl;
+    std::cout << "最大末端误差: " << max_error_ << std::endl;
+    std::cout << "末端误差系数 Kee: " << Kee_ << std::endl;
+    std::cout << "伪逆方法: " << pinv_method_ << std::endl;
+    std::cout << "限位方法: " << limiting_method_ << std::endl;
+    std::cout << "步长方法: " << step_size_method_ << std::endl;
+    std::cout << "初值方法: " << seed_method_ << std::endl;
+    std::cout << "误差计算类型: " << error_type_ << std::endl;
+    std::cout << "详细程度级别: " << verb_level_ << std::endl;
+    std::cout << "求解器模式: " << solve_mode_ << std::endl;
   }
 
   INVJ_BASE::INVJ_BASE(const pin::Model &_model, const pin::FrameIndex &_Fee_id,
@@ -144,7 +144,7 @@ private:
         id_Fee_(_Fee_id), max_time_(_max_time), max_error_(_max_error),
         max_iter_(_max_iter), dt_(_dt), distribution_(_dt, 0.5), id_(_id)
   {
-    std::cout << "----------\nInitializing IK solver COIKS-INVJ" << std::endl;
+    std::cout << "----------\n正在初始化 IK 求解器 COIKS-INVJ" << std::endl;
 
     GetOptions(_solver_opts);
 
@@ -237,7 +237,7 @@ private:
     else
     {
       std::cout << "[INVJ " << id_
-                << "] Invalid method for pseudoinverse. Using SVD."
+                << "] 伪逆方法无效。使用 SVD。"
                 << std::endl;
       return pseudoInverse(a, epsilon, "svd");
     }
@@ -306,7 +306,7 @@ private:
     else
     {
       std::cout << "[INVJ " << id_
-                << "] Invalid error type for EE task. Using log6." << std::endl;
+                << "] 末端任务的误差类型无效。使用 log6。" << std::endl;
       return computeEETaskError(B_X_EE, X_d, "log6", err_ee);
     }
 
@@ -342,7 +342,7 @@ private:
 
     if (verb_level_ >= 1)
       std::cout << "\n[INVJ " << id_
-                << "] Solving with optimizer INVJ IK and Initial guess:"
+                << "] 正在使用 INVJ IK 优化器求解，初始猜测:"
                 << q_it.transpose() << std::endl;
 
     Vector6d err_ee;
@@ -391,7 +391,7 @@ private:
       {
         if (verb_level_ >= 1)
           std::cout << "[INVJ " << id_
-                    << "]  Aborted by other solvers or Maximum time exceeded:"
+                    << "]  被其他求解器中止或已超过最大时间:"
                     << time_elapsed_s << std::endl;
         break;
       }
@@ -456,7 +456,7 @@ private:
       if (verb_level_ >= 1)
       {
         std::cout << "[INVJ " << id_ << "] [" << it
-                  << "] error EE: " << err_ee.norm() << " : "
+                  << "] 末端误差: " << err_ee.norm() << " : "
                   << err_ee.transpose() << std::endl;
         std::cout << "[INVJ " << id_ << "] q_it: " << q_it.transpose()
                   << std::endl;
@@ -466,7 +466,7 @@ private:
       if (err_ee.norm() < max_error_)
       {
         if (verb_level_ >= 1)
-          std::cout << "[INVJ " << id_ << "]  Solution found" << std::endl;
+          std::cout << "[INVJ " << id_ << "]  找到解" << std::endl;
         success_ = true;
         break;
       }
@@ -488,7 +488,7 @@ private:
       {
         if (verb_level_ >= 1)
           std::cout << "[INVJ " << id_
-                    << "] Stagnation detected. Reinitializing randomly."
+                    << "] 检测到停滞。正在随机重新初始化。"
                     << std::endl;
 
         q_it = pin::randomConfiguration(mdl_);
@@ -514,9 +514,9 @@ private:
 
       if (verb_level_ >= 1)
         std::cout << "\n[INVJ " << id_
-                  << "] Warning: the iterative algorithm has not reached "
-                     "convergence to the desired precision after "
-                  << iteration << " iterations." << std::endl;
+                  << "] 警告: 迭代算法未达到"
+                     "所需精度的收敛要求，经过 "
+                  << iteration << " 次迭代。" << std::endl;
       return 1;
     }
   }
@@ -550,7 +550,7 @@ private:
 
     if (verb_level_ >= 1)
       std::cout << "\n[INVJ " << id_
-                << "] Solving with optimizer INVJ IK and Initial guess:"
+                << "] 正在使用 INVJ IK 优化器求解，初始猜测:"
                 << q_it.transpose() << std::endl;
 
     Vector6d err_ee;
@@ -596,7 +596,7 @@ private:
       {
         if (verb_level_ >= 1)
           std::cout << "[INVJ " << id_
-                    << "]  Aborted by other solvers or Maximum time exceeded: "
+                    << "]  被其他求解器中止或已超过最大时间: "
                     << time_elapsed_s << std::endl;
         break;
       }
@@ -676,7 +676,7 @@ private:
       if (verb_level_ >= 1)
       {
         std::cout << "[INVJ " << id_ << "] [" << it
-                  << "] error EE: " << err_ee.norm() << " : "
+                  << "] 末端误差: " << err_ee.norm() << " : "
                   << err_ee.transpose() << std::endl;
         std::cout << "[INVJ " << id_ << "] q_it: " << q_it.transpose()
                   << std::endl;
@@ -686,7 +686,7 @@ private:
       if (err_ee.norm() < max_error_)
       {
         if (verb_level_ >= 1)
-          std::cout << "[INVJ " << id_ << "]  Solution found" << std::endl;
+          std::cout << "[INVJ " << id_ << "]  找到解" << std::endl;
         success_ = true;
         break;
       }
@@ -708,7 +708,7 @@ private:
       {
         if (verb_level_ >= 1)
           std::cout << "[INVJ " << id_
-                    << "] Stagnation detected. Reinitializing randomly."
+                    << "] 检测到停滞。正在随机重新初始化。"
                     << std::endl;
 
         q_it = pin::randomConfiguration(mdl_);
@@ -757,9 +757,9 @@ private:
 
       if (verb_level_ >= 1)
         std::cout << "\n[INVJ " << id_
-                  << "] Warning: the iterative algorithm has not reached "
-                     "convergence to the desired precision after "
-                  << max_iter_ << " iterations." << std::endl;
+                  << "] 警告: 迭代算法未达到"
+                     "所需精度的收敛要求，经过 "
+                  << max_iter_ << " 次迭代。" << std::endl;
       return 1;
     }
   }

@@ -143,20 +143,20 @@ public:
     qp_warm_start_ = so.qp_warm_start_;
     verb_level_ = so.verb_level_;
 
-    std::cout << "\n------\nQP Options summary:" << std::endl;
-    std::cout << "Error computation type: " << error_type_ << std::endl;
-    std::cout << "Max. EE error: " << max_error_ << std::endl;
-    std::cout << "Pinv method: " << pinv_method_ << std::endl;
-    std::cout << "Limiting method: " << limiting_method_ << std::endl;
-    std::cout << "Step size method: " << step_size_method_ << std::endl;
-    std::cout << "Seed method: " << seed_method_ << std::endl;
-    std::cout << "Verbosity Level: " << verb_level_ << std::endl;
-    std::cout << "Task Coeff. (K) T1:" << qp_K_t1_ << std::endl;
-    std::cout << "Residual Coeff. (Kr) T1:" << qp_Kr_t1_ << std::endl;
-    std::cout << "Damping Coeff. (Kd) P1:" << qp_Kd_p1_ << std::endl;
-    std::cout << "Slack Regularization Coeff. (Kw) P1:" << qp_Kw_p1_
+    std::cout << "\n------\nQP 选项摘要:" << std::endl;
+    std::cout << "误差计算类型: " << error_type_ << std::endl;
+    std::cout << "最大末端误差: " << max_error_ << std::endl;
+    std::cout << "伪逆方法: " << pinv_method_ << std::endl;
+    std::cout << "限位方法: " << limiting_method_ << std::endl;
+    std::cout << "步长方法: " << step_size_method_ << std::endl;
+    std::cout << "初值方法: " << seed_method_ << std::endl;
+    std::cout << "详细程度级别: " << verb_level_ << std::endl;
+    std::cout << "任务系数 (K) T1:" << qp_K_t1_ << std::endl;
+    std::cout << "残差系数 (Kr) T1:" << qp_Kr_t1_ << std::endl;
+    std::cout << "阻尼系数 (Kd) P1:" << qp_Kd_p1_ << std::endl;
+    std::cout << "松弛正则化系数 (Kw) P1:" << qp_Kw_p1_
               << std::endl;
-    std::cout << "QP warm start : " << qp_warm_start_ << std::endl;
+    std::cout << "QP 热启动: " << qp_warm_start_ << std::endl;
   }
 
   QP_BASE::QP_BASE(const pin::Model &_model, const pin::FrameIndex &_Fee_id,
@@ -167,7 +167,7 @@ public:
         id_Fee_(_Fee_id), max_time_(_max_time), max_error_(_max_error),
         max_iter_(_max_iter), dt_(_dt), distribution_(_dt, 0.5)
   {
-    std::cout << "----------\nInitializing IK solver COIKS-QP" << std::endl;
+    std::cout << "----------\n正在初始化 IK 求解器 COIKS-QP" << std::endl;
     GetOptions(_solver_opts);
 
     //* Seed the random number generator
@@ -178,7 +178,7 @@ public:
     q_ul_ = mdl_.upperPositionLimit;
     q_ll_ = mdl_.lowerPositionLimit;
 
-    std::cout << "Generating QP solver " << std::endl;
+    std::cout << "正在生成 QP 求解器 " << std::endl;
     generate_qp_solver();
 
     // Initializing parameters for QP-Task1
@@ -240,11 +240,11 @@ public:
     par1.resize(3 * n_q_, 5 * n_q_ + 2);
 
     // Getting Joints
-    std::cout << "Joints lower limits: " << mdl_.lowerPositionLimit.transpose()
+    std::cout << "关节下限: " << mdl_.lowerPositionLimit.transpose()
               << std::endl;
-    std::cout << "Joints upper limits: " << mdl_.upperPositionLimit.transpose()
+    std::cout << "关节上限: " << mdl_.upperPositionLimit.transpose()
               << std::endl;
-    std::cout << "# of Joints considered for IK solver: " << n_q_ << std::endl;
+    std::cout << "IK 求解器考虑的关节数: " << n_q_ << std::endl;
   }
 
   QP_BASE::~QP_BASE() {}
@@ -339,7 +339,7 @@ public:
     }
 
     if (verb_level_ >= 1)
-      std::cout << "\n[QP] Solving with optimizer QP IK and Initial guess:"
+      std::cout << "\n[QP] 正在使用 QP IK 优化器求解，初始猜测:"
                 << q_init.transpose() << std::endl;
 
     Vector6d err_ee = Vector6d::Zero();
@@ -377,7 +377,7 @@ public:
       {
         if (verb_level_ >= 1)
           std::cout
-              << "[QP]  Aborted by other solvers or Maximum time exceeded: "
+              << "[QP]  被其他求解器中止或已超过最大时间: "
               << time_elapsed_s << std::endl;
         break;
       }
@@ -402,7 +402,7 @@ public:
       d_t1_ = d_eig_;
 
       if (verb_level_ >= 1)
-        std::cout << "[QP] qd limits (d): " << d_eig_.transpose() << std::endl;
+        std::cout << "[QP] qd 限值 (d): " << d_eig_.transpose() << std::endl;
 
       if (error_type_ == "only_p")
       {
@@ -472,13 +472,13 @@ public:
       ca::DMDict res_qpsolver1_ = qpsolver1_(arg_qpopt);
 
       if (verb_level_ >= 2)
-        std::cout << "[QP] QP solution: " << res_qpsolver1_["x"] << std::endl;
+        std::cout << "[QP] QP 解: " << res_qpsolver1_["x"] << std::endl;
 
       qd_opt_1 = res_qpsolver1_["x"](ca::Slice(0, n_q_));
       MatrixXd qd_opt_hat_1 = casDM_to_eig(qd_opt_1);
 
       if (verb_level_ >= 1)
-        std::cout << "[QP] qd optimal (Priority 1): " << qd_opt_1 << std::endl;
+        std::cout << "[QP] qd 最优值（优先级 1）: " << qd_opt_1 << std::endl;
 
       qd_opt = qd_opt_hat_1;
 
@@ -515,8 +515,8 @@ public:
         if (outside_limits)
         {
           if (verb_level_ >= 1)
-            std::cout << "[QP] Random configuration generated because of "
-                         "joint limits"
+            std::cout << "[QP] 因关节限位而生成"
+                         "随机配置"
                       << std::endl;
           q_it = pin::randomConfiguration(mdl_);
         }
@@ -531,7 +531,7 @@ public:
       computeEETaskError(B_X_EE, X_d, err_ee);
 
       if (verb_level_ >= 1)
-        std::cout << "[QP] EE error: " << err_ee.norm() << " -> "
+        std::cout << "[QP] 末端误差: " << err_ee.norm() << " -> "
                   << err_ee.transpose() << std::endl;
 
       // Check for convergence
@@ -539,9 +539,9 @@ public:
       {
         if (verb_level_ >= 1)
         {
-          std::cout << "[QP] Iteration: " << it
-                    << " EE error: " << err_ee.norm() << std::endl;
-          std::cout << "[QP] iteration: " << it << " - Solution found "
+          std::cout << "[QP] 迭代: " << it
+                    << " 末端误差: " << err_ee.norm() << std::endl;
+          std::cout << "[QP] 迭代: " << it << " - 找到解 "
                     << q_it.transpose() << std::endl;
         }
         success_ = true;
@@ -556,16 +556,16 @@ public:
     if (success_)
     {
       if (verb_level_ >= 1)
-        std::cout << "QP: Convergence achieved!" << std::endl;
+        std::cout << "QP: 已收敛!" << std::endl;
 
       q_sol = q_it;
       return 0;
     }
 
     if (verb_level_ >= 1)
-      std::cout << "\nQP: Warning: the iterative algorithm has not reached "
-                   "convergence to the desired precision after "
-                << max_iter_ << " iterations." << std::endl;
+      std::cout << "\nQP: 警告: 迭代算法未达到"
+                   "所需精度的收敛要求，经过 "
+                << max_iter_ << " 次迭代。" << std::endl;
     return 1;
   }
 
@@ -690,7 +690,7 @@ public:
     }
     else
     {
-      std::cout << "Invalid method for pseudoinverse. Using SVD." << std::endl;
+      std::cout << "伪逆方法无效。使用 SVD。" << std::endl;
       return pseudoInverse(a, epsilon, "svd");
     }
   }

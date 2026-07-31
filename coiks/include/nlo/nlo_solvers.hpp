@@ -93,7 +93,7 @@ public:
     {
       aborted_ = true;
       if (verb_level_ >= 1)
-        std::cout << "Setting NLO abort" << std::endl;
+        std::cout << "正在设置 NLO 中止状态" << std::endl;
     }
     inline void reset() { aborted_ = false; }
     inline void set_max_time(double _max_time) { max_time_ = _max_time; }
@@ -117,23 +117,23 @@ public:
     time_stats_ = so.time_stats_;
     verb_level_ = so.verb_level_;
 
-    std::cout << "\n------\n NLO Options summary:" << std::endl;
-    std::cout << "NLO concurrent mode enabled: " << nlo_concurrent_
+    std::cout << "\n------\n NLO 选项摘要:" << std::endl;
+    std::cout << "NLO 并发模式已启用: " << nlo_concurrent_
               << std::endl;
-    std::cout << "NLO concurrent iterations: " << nlo_concurrent_iterations_
+    std::cout << "NLO 并发迭代次数: " << nlo_concurrent_iterations_
               << std::endl;
-    std::cout << "NLO warm start: " << nlo_warm_start_ << std::endl;
-    std::cout << "Error computation type: " << error_type_ << std::endl;
-    std::cout << "Linear solver: " << nlo_linear_solver_ << std::endl;
-    std::cout << "Max. EE error: " << max_error_ << std::endl;
-    std::cout << "Verbosity Level: " << verb_level_ << std::endl;
-    std::cout << "Time Statstics: " << time_stats_ << std::endl;
-    std::cout << "Coeff[0] Pos(log3)/Pose(log6) error: " << cost_coeff_[0]
+    std::cout << "NLO 热启动: " << nlo_warm_start_ << std::endl;
+    std::cout << "误差计算类型: " << error_type_ << std::endl;
+    std::cout << "线性求解器: " << nlo_linear_solver_ << std::endl;
+    std::cout << "最大末端误差: " << max_error_ << std::endl;
+    std::cout << "详细程度级别: " << verb_level_ << std::endl;
+    std::cout << "时间统计: " << time_stats_ << std::endl;
+    std::cout << "系数[0] 位置(log3)/位姿(log6)误差: " << cost_coeff_[0]
               << std::endl;
-    std::cout << "Coeff[1] Ori(log3): " << cost_coeff_[1] << std::endl;
-    std::cout << "Coeff[2] RCM error: " << cost_coeff_[2] << std::endl;
-    std::cout << "Coeff[3] Qdelta: " << cost_coeff_[3] << std::endl;
-    std::cout << "Coeff[4] Manipulability: " << cost_coeff_[4] << std::endl;
+    std::cout << "系数[1] 姿态(log3): " << cost_coeff_[1] << std::endl;
+    std::cout << "系数[2] RCM 误差: " << cost_coeff_[2] << std::endl;
+    std::cout << "系数[3] Qdelta: " << cost_coeff_[3] << std::endl;
+    std::cout << "系数[4] 可操作度: " << cost_coeff_[4] << std::endl;
   }
 
   NLO_BASE::NLO_BASE(const pin::Model &_model, const pin::FrameIndex &_Fee_id,
@@ -144,7 +144,7 @@ public:
         id_Fee_(_Fee_id), max_time_(_max_time), max_error_(_max_error),
         max_iter_(_max_iter), dt_(_dt)
   {
-    std::cout << "----------\nInitializing IK solver COIKS-NLO" << std::endl;
+    std::cout << "----------\n正在初始化 IK 求解器 COIKS-NLO" << std::endl;
 
     GetOptions(_solver_opts);
 
@@ -178,7 +178,7 @@ public:
 
     //* Generate symbolic FK
 
-    std::cout << "Generate Casadi FK function" << std::endl;
+    std::cout << "正在生成 Casadi 正向运动学函数" << std::endl;
     pin::framesForwardKinematics(model, data, _q);
 
     // Extract Eigen::Matrix results
@@ -206,13 +206,13 @@ public:
     generate_nlsolver();
 
     // Getting Joints
-    std::cout << "Joints considered for IK solver: " << n_q_ << std::endl;
-    std::cout << "Joints lower limits: " << mdl_.lowerPositionLimit.transpose()
+    std::cout << "IK 求解器考虑的关节数: " << n_q_ << std::endl;
+    std::cout << "关节下限: " << mdl_.lowerPositionLimit.transpose()
               << std::endl;
-    std::cout << "Joints upper limits: " << mdl_.upperPositionLimit.transpose()
+    std::cout << "关节上限: " << mdl_.upperPositionLimit.transpose()
               << std::endl;
 
-    std::cout << "COIKS-NLO initialized\n---------------------------------"
+    std::cout << "COIKS-NLO 已初始化\n---------------------------------"
               << std::endl;
   }
 
@@ -237,7 +237,7 @@ public:
 
     q_sol = q_init;
     if (verb_level_ >= 1)
-      std::cout << "\nSolving NLO IK with optimizer with q_init:"
+      std::cout << "\n正在使用优化器求解 NLO IK，q_init:"
                 << q_init.transpose() << std::endl;
 
     ca::SX ca_pd = eig_to_casDM(x_d.translation());
@@ -276,7 +276,7 @@ public:
     for (int it = 0;; it++)
     {
       if (verb_level_ >= 1)
-        std::cout << "Starting it " << it << " with warm start "
+        std::cout << "开始迭代 " << it << "，热启动值 "
                   << arg_nlopt["x0"] << std::endl;
 
       //* Solve NLO IK
@@ -288,7 +288,7 @@ public:
       double opt_cost = static_cast<double>(f_opt);
 
       if (verb_level_ >= 1)
-        std::cout << "\nIt solution: " << qd_opt << std::endl;
+        std::cout << "\n迭代解: " << qd_opt << std::endl;
 
       // Verify costs
       std::vector<ca::DM> xcost =
@@ -306,18 +306,18 @@ public:
       if (verb_level_ >= 1)
       {
         ca::DM c2 = ca::DM::mtimes(qd_opt.T(), qd_opt);
-        std::cout << "\nAfer optimization:" << err_ee << std::endl;
+        std::cout << "\n优化后:" << err_ee << std::endl;
 
-        std::cout << "\tPose error : " << err_ee << std::endl;
-        std::cout << "\tPosition error : " << p_err << std::endl;
-        std::cout << "\tOrientation error : " << r_err << std::endl;
-        std::cout << "\tCost0 : " << c0
-                  << " Squared and Scaled: " << ca::DM(mu0_) * c0 * c0
+        std::cout << "\t位姿误差: " << err_ee << std::endl;
+        std::cout << "\t位置误差: " << p_err << std::endl;
+        std::cout << "\t姿态误差: " << r_err << std::endl;
+        std::cout << "\t成本0: " << c0
+                  << " 平方并缩放后: " << ca::DM(mu0_) * c0 * c0
                   << std::endl;
-        std::cout << "\tCost1 : " << c1
-                  << " Squared and Scaled: " << ca::DM(mu1_) * c1 * c1
+        std::cout << "\t成本1: " << c1
+                  << " 平方并缩放后: " << ca::DM(mu1_) * c1 * c1
                   << std::endl;
-        std::cout << "\tCost2 : " << c2 << " Scaled: " << ca::DM(mu2_) * c2
+        std::cout << "\t成本2: " << c2 << " 缩放后: " << ca::DM(mu2_) * c2
                   << std::endl;
       }
 
@@ -330,8 +330,8 @@ public:
       {
         if (verb_level_ >= 1)
         {
-          std::cout << "NLO: Warning: the iterative algorithm has not reached "
-                       "convergence to the desired precision."
+          std::cout << "NLO: 警告: 迭代算法未达到"
+                       "所需精度的收敛要求。"
                     << std::endl;
           success_ = false;
         }
@@ -341,7 +341,7 @@ public:
       if (time_left < 0)
       {
         if (verb_level_ >= 1)
-          std::cout << "NLO Aborted. Maximum time exceeded: " << time_left
+          std::cout << "NLO 已中止。已超过最大时间: " << time_left
                     << std::endl;
         break;
       }
@@ -349,14 +349,14 @@ public:
       if (aborted_)
       {
         if (verb_level_ >= 1)
-          std::cout << "NLO Aborted by other IK solver " << std::endl;
+          std::cout << "NLO 被其他 IK 求解器中止 " << std::endl;
         break;
       }
 
       if (it >= max_iter_)
       {
         if (verb_level_ >= 1)
-          std::cout << "NLO Aborted. Maximum number of iteration reached. "
+          std::cout << "NLO 已中止。已达到最大迭代次数。"
                     << std::endl;
         break;
       }
@@ -392,8 +392,8 @@ public:
     else
     {
       if (verb_level_ >= 1)
-        std::cout << "\nNLO: Warning: the iterative algorithm has not reached "
-                     "convergence to the desired precision "
+        std::cout << "\nNLO: 警告: 迭代算法未达到"
+                     "所需精度的收敛要求 "
                   << std::endl;
       return 1;
     }
@@ -439,7 +439,7 @@ public:
 
     //? Use non-constrained control
     if (verb_level_ >= 1)
-      std::cout << "No constrained motion" << std::endl;
+      std::cout << "无约束运动" << std::endl;
 
     std::vector<ca::SX> xcost =
         ca_perr2_(std::vector<ca::SX>{q_in + q_delta, ca_pd, ca_Rd});
@@ -456,7 +456,7 @@ public:
   void NLO_BASE::generate_ca_EE_error()
   {
     if (verb_level_ >= 1)
-      std::cout << "Generating Casadi EE error function" << std::endl;
+      std::cout << "正在生成 Casadi 末端误差函数" << std::endl;
     // Inputs
     ca::SX R_des = ca::SX::sym("R_act", 3, 3);
     ca::SX p_des = ca::SX::sym("p_act", 3, 1);
@@ -507,7 +507,7 @@ public:
   void NLO_BASE::generate_ca_log3_EE_error()
   {
     if (verb_level_ >= 1)
-      std::cout << "Generating Casadi Log3 EE error function" << std::endl;
+      std::cout << "正在生成 Casadi Log3 末端误差函数" << std::endl;
     // Inputs
     ca::SX R_des = ca::SX::sym("R_act", 3, 3);
     ca::SX p_des = ca::SX::sym("p_act", 3, 1);
@@ -538,7 +538,7 @@ public:
   void NLO_BASE::generate_ca_log3()
   {
     if (verb_level_ >= 1)
-      std::cout << "Generating Casadi log3 function" << std::endl;
+      std::cout << "正在生成 Casadi log3 函数" << std::endl;
     ca::SX tolerance = 1e-8;
 
     ca::SX R = ca::SX::sym("R", 3, 3);
@@ -559,7 +559,7 @@ public:
   void NLO_BASE::generate_ca_log6()
   {
     if (verb_level_ >= 1)
-      std::cout << "Generating Casadi log6 function" << std::endl;
+      std::cout << "正在生成 Casadi log6 函数" << std::endl;
     ca::SX tolerance = 1e-8;
     ca::SX tolerance2 = 1e-16;
 

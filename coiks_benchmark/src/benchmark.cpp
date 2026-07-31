@@ -35,6 +35,8 @@
 
 #include <coiks/solution_set.hpp>
 
+#include "experiment_output.hpp"
+
 using namespace coiks;
 namespace pin = pinocchio;
 
@@ -55,15 +57,15 @@ class BenchmarkKDL : public IkSolver
 
   bool initialize_kdl()
   {
-    std::cout << "Initializing KDL with Max. Error: " << max_error_
-              << " Max. It.:" << max_iter_ << " Delta T:" << dt_ << std::endl;
+    std::cout << "正在初始化 KDL，最大误差: " << max_error_
+              << " 最大迭代次数:" << max_iter_ << " 时间步长:" << dt_ << std::endl;
 
     double maxtime = 0.005;
 
     // Parsing URDF
     if (!kdl_parser::treeFromFile(urdf_file_, kdl_tree_))
     {
-      ROS_ERROR("Failed to construct kdl tree");
+      std::cerr << "[ERROR] " << "构建 KDL 树失败" << std::endl;
       return false;
     }
     bool exit_value = kdl_tree_.getChain(base_link_, ee_link_, kdl_chain_);
@@ -103,7 +105,7 @@ class BenchmarkKDL : public IkSolver
     {
       nominal_(j) = (ll_(j) + ul_(j)) / 2.0;
     }
-    std::cout << "KDL initialized" << std::endl;
+    std::cout << "KDL 初始化完成" << std::endl;
     initialized_ = true;
 
     return true;
@@ -134,12 +136,12 @@ class BenchmarkKDL : public IkSolver
 
       success = true;
       return 0;
-      // ROS_WARN_STREAM("IK solution found: " <<
-      // des_joint_pos_.transpose());
+      // std::cerr << "[WARN] " << "IK solution found: " <<
+      // des_joint_pos_.transpose() << std::endl
     }
     else
     {
-      // ROS_WARN_STREAM("No IK solution found");
+      // std::cerr << "[WARN] " << "No IK solution found" << std::endl
       success = false;
       return 1;
     }
@@ -202,13 +204,13 @@ class BenchmarkTRACIK : public IkSolver
 
   bool initialize_tracik()
   {
-    std::cout << "Initializing TRACIK with Max. Error: " << max_error_
-              << " Max. Time:" << max_time_ << " Delta T:" << dt_ << std::endl;
+    std::cout << "正在初始化 TRACIK，最大误差: " << max_error_
+              << " 最大时间:" << max_time_ << " 时间步长:" << dt_ << std::endl;
 
     // Parsing URDF
     if (!kdl_parser::treeFromFile(urdf_file_, kdl_tree_))
     {
-      ROS_ERROR("Failed to construct kdl tree");
+      std::cerr << "[ERROR] " << "构建 KDL 树失败" << std::endl;
       return false;
     }
     bool exit_value = kdl_tree_.getChain(base_link_, ee_link_, kdl_chain_);
@@ -249,7 +251,7 @@ class BenchmarkTRACIK : public IkSolver
                                                 max_error_, TRAC_IK::Manip1));
     else
     {
-      ROS_WARN("Invalid solver mode. Using Speed mode");
+      std::cerr << "[WARN] " << "求解器模式无效，将使用速度模式" << std::endl;
       tracik_solver_.reset(new TRAC_IK::TRAC_IK(kdl_chain_, ll_, ul_, max_time_,
                                                 max_error_, TRAC_IK::Speed));
     }
@@ -259,7 +261,7 @@ class BenchmarkTRACIK : public IkSolver
     {
       nominal_(j) = (ll_(j) + ul_(j)) / 2.0;
     }
-    std::cout << "TRACIK initialized" << std::endl;
+    std::cout << "TRACIK 初始化完成" << std::endl;
 
     return true;
   }
@@ -333,7 +335,8 @@ double fRand(double min, double max)
 void solveIkFromRandomList(std::string urdf_file_, std::string qinit_file_,
                            std::string target_file_, int num_samples,
                            IkSolver *ik_solver, std::string ee_link_,
-                           bool print_all = false, int robot_id = 0)
+                           bool print_all, int robot_id,
+                           const std::string &output_dir)
 {
   double                  total_time = 0;
   double                  total_time_it = 0;
@@ -370,8 +373,8 @@ void solveIkFromRandomList(std::string urdf_file_, std::string qinit_file_,
   q_ul_ = model_.upperPositionLimit;
   q_ll_ = model_.lowerPositionLimit;
 
-  std::cout << "Solving IK with " << ik_solver->get_solver_name() << " for "
-            << num_samples << " random configurations for link " << ee_link_
+  std::cout << "使用求解器求解 IK: " << ik_solver->get_solver_name() << "，处理 "
+            << num_samples << " 个随机配置，目标链接为 " << ee_link_
             << std::endl;
 
   // Create desired number of valid, random joint configurations
@@ -380,7 +383,7 @@ void solveIkFromRandomList(std::string urdf_file_, std::string qinit_file_,
   VectorXd              qinit(ik_solver->get_n_joints());
 
   // Read qinit values from CSV file
-  std::cout << "Reading from file: " << qinit_file_ << std::endl;
+  std::cout << "正在读取文件: " << qinit_file_ << std::endl;
   std::string   line;
   std::ifstream file(qinit_file_);
 
@@ -412,11 +415,11 @@ void solveIkFromRandomList(std::string urdf_file_, std::string qinit_file_,
   }
   else
   {
-    std::cerr << "Unable to open file: " << qinit_file_ << std::endl;
+    std::cerr << "无法打开文件: " << qinit_file_ << std::endl;
   }
 
   // Read target values from CSV file
-  std::cout << "Reading from file: " << target_file_ << std::endl;
+  std::cout << "正在读取文件: " << target_file_ << std::endl;
   std::ifstream file2(target_file_);
 
   if (file2.is_open())
@@ -461,74 +464,30 @@ void solveIkFromRandomList(std::string urdf_file_, std::string qinit_file_,
   }
   else
   {
-    std::cerr << "Unable to open file: " << target_file_ << std::endl;
+    std::cerr << "无法打开文件: " << target_file_ << std::endl;
   }
 
   pin::Data mdl_data(model_);
 
-  time_t     currentTime;
-  struct tm *localTime;
+  const std::string csv_path =
+      makeResultCsvPath(output_dir, ik_solver->get_solver_name(), robot_id);
+  fout.open(csv_path, std::ios::out);
+  if (!fout.is_open())
+  {
+    std::cerr << "[ERROR] 无法打开结果文件: " << csv_path << std::endl;
+  }
+  else
+  {
+    std::cout << "[INFO] 结果写入: " << csv_path << std::endl;
+  }
 
-  time(&currentTime); // Get the current time
-  localTime = localtime(&currentTime);
-  if (ik_solver->get_solver_name() == "kdl")
+  if (ik_solver->get_solver_name() == "kdl" ||
+      ik_solver->get_solver_name() == "trac_ik")
   {
-    fout.open("/home/colan/kdl_r" + std::to_string(robot_id) + "_" +
-                  std::to_string(localTime->tm_mday) +
-                  std::to_string(localTime->tm_hour) +
-                  std::to_string(localTime->tm_min) +
-                  std::to_string(localTime->tm_sec) + ".csv",
-              std::ios::out | std::ios::app);
     fout << "idx,time,q_init,q_sol\n";
   }
-  else if (ik_solver->get_solver_name() == "trac_ik")
+  else
   {
-    fout.open("/home/colan/tracik_r" + std::to_string(robot_id) + "_" +
-                  std::to_string(localTime->tm_mday) +
-                  std::to_string(localTime->tm_hour) +
-                  std::to_string(localTime->tm_min) +
-                  std::to_string(localTime->tm_sec) + ".csv",
-              std::ios::out | std::ios::app);
-    fout << "idx,time,q_init,q_sol\n";
-  }
-  else if (ik_solver->get_solver_name().substr(0, 5) == "coiks")
-  {
-    fout.open("/home/colan/coiks_r" + std::to_string(robot_id) + "_" +
-                  std::to_string(localTime->tm_mday) +
-                  std::to_string(localTime->tm_hour) +
-                  std::to_string(localTime->tm_min) +
-                  std::to_string(localTime->tm_sec) + ".csv",
-              std::ios::out | std::ios::app);
-    fout << "idx,res,time,solver_id,sol_id,error,q_init,q_sol\n";
-  }
-  else if (ik_solver->get_solver_name() == "invj")
-  {
-    fout.open("/home/colan/invj_r" + std::to_string(robot_id) + "_" +
-                  std::to_string(localTime->tm_mday) +
-                  std::to_string(localTime->tm_hour) +
-                  std::to_string(localTime->tm_min) +
-                  std::to_string(localTime->tm_sec) + ".csv",
-              std::ios::out | std::ios::app);
-    fout << "idx,res,time,solver_id,sol_id,error,q_init,q_sol\n";
-  }
-  else if (ik_solver->get_solver_name() == "nlo")
-  {
-    fout.open("/home/colan/nlo_r" + std::to_string(robot_id) + "_" +
-                  std::to_string(localTime->tm_mday) +
-                  std::to_string(localTime->tm_hour) +
-                  std::to_string(localTime->tm_min) +
-                  std::to_string(localTime->tm_sec) + ".csv",
-              std::ios::out | std::ios::app);
-    fout << "idx,res,time,solver_id,sol_id,error,q_init,q_sol\n";
-  }
-  else if (ik_solver->get_solver_name() == "qp")
-  {
-    fout.open("/home/colan/qp_r" + std::to_string(robot_id) + "_" +
-                  std::to_string(localTime->tm_mday) +
-                  std::to_string(localTime->tm_hour) +
-                  std::to_string(localTime->tm_min) +
-                  std::to_string(localTime->tm_sec) + ".csv",
-              std::ios::out | std::ios::app);
     fout << "idx,res,time,solver_id,sol_id,error,q_init,q_sol\n";
   }
 
@@ -552,12 +511,12 @@ void solveIkFromRandomList(std::string urdf_file_, std::string qinit_file_,
 
     prob_id++;
     if (print_all)
-      std::cout << "\n[Prob " << i
-                << "] Solving for Joints: " << q_init.transpose() << std::endl;
+      std::cout << "\n[问题 " << i
+                << "] 正在求解关节配置: " << q_init.transpose() << std::endl;
 
     if (print_all)
-      std::cout << "[Prob " << i
-                << "] Solving for Pos: " << x_des.translation().transpose()
+      std::cout << "[问题 " << i
+                << "] 正在求解位置: " << x_des.translation().transpose()
                 << std::endl;
     start_it_time = std::chrono::high_resolution_clock::now();
 
@@ -581,25 +540,25 @@ void solveIkFromRandomList(std::string urdf_file_, std::string qinit_file_,
     if (res == 0 && ik_solver->get_solver_name() != "kdl" &&
         ik_solver->get_solver_name() != "trac_ik" && print_all)
     {
-      std::cout << "IK solution found: " << q_sol.transpose() << std::endl;
+      std::cout << "找到 IK 解: " << q_sol.transpose() << std::endl;
 
       // You can now access the best solution details
-      std::cout << "Best solution metric: " << bestSolution.metrics["error"]
+      std::cout << "最佳解指标: " << bestSolution.metrics["error"]
                 << std::endl;
-      std::cout << "Best solution joint positions: "
+      std::cout << "最佳解关节位置: "
                 << bestSolution.configuration.transpose() << std::endl;
       // Access other fields of bestSolution as needed
     }
 
     if (res && print_all)
-      ROS_WARN("Solution not found");
+      std::cerr << "[WARN] " << "未找到解" << std::endl;
 
     if (print_all)
     {
-      std::cout << "Time: " << duration_it.count() << " [us]" << std::endl;
+      std::cout << "耗时: " << duration_it.count() << " [微秒]" << std::endl;
       if (!res)
       {
-        std::cout << "Solution: " << q_sol.transpose() << std::endl;
+        std::cout << "解: " << q_sol.transpose() << std::endl;
       }
     }
 
@@ -644,15 +603,15 @@ void solveIkFromRandomList(std::string urdf_file_, std::string qinit_file_,
   total_time = duration_cb.count();
 
   std::cout << "------------------------------" << std::endl;
-  std::cout << "Summary:" << std::endl;
+  std::cout << "汇总:" << std::endl;
 
-  std::cout << ik_solver->get_solver_name() << " found " << n_success
-            << " solutions (" << 100.0 * n_success / num_samples
-            << "\%) with a total average of " << total_time / num_samples
-            << " usec/config. Solving average of "
-            << total_time_it / num_samples << " usec/config."
-            << "Success solving average of " << success_time_it / n_success
-            << " usec/config." << std::endl;
+  std::cout << ik_solver->get_solver_name() << " 找到 " << n_success
+            << " 个解（" << 100.0 * n_success / num_samples
+            << "\%），总平均耗时 " << total_time / num_samples
+            << " 微秒/配置。求解平均耗时 "
+            << total_time_it / num_samples << " 微秒/配置。"
+            << "成功求解平均耗时 " << success_time_it / n_success
+            << " 微秒/配置。" << std::endl;
   if (ik_solver->get_solver_name() == "codcs")
   {
     ik_solver->printStatistics();
@@ -668,12 +627,12 @@ bool kill_process = false;
 void SigIntHandler(int signal)
 {
   kill_process = true;
-  ROS_INFO_STREAM("SHUTDOWN SIGNAL RECEIVED");
+  std::cout << "[INFO] " << "收到关闭信号" << std::endl;
 }
 
 int main(int argc, char **argv)
 {
-  ROS_INFO("Unscontrained IK Benchmarking for COIKS, TRAC-IK and KDL");
+  std::cout << "[INFO] " << "COIKS、TRAC-IK 与 KDL 无约束 IK 基准测试" << std::endl;
   ros::init(argc, argv, "coiks_benchmark");
   ros::NodeHandle nh;
   std::signal(SIGINT, SigIntHandler);
@@ -1029,10 +988,10 @@ int main(int argc, char **argv)
     break;
 
   default:
-    ROS_ERROR("Kinematic Tree ID not recognized.");
+    std::cerr << "[ERROR] " << "无法识别运动学树 ID。" << std::endl;
     return -1;
   }
-  ROS_INFO_STREAM("Using URDF found in: " << urdf_path);
+  std::cout << "[INFO] " << "正在使用此处找到的 URDF: " << urdf_path << std::endl;
 
   // Creating solver options class
   SolverOptions so;
@@ -1069,41 +1028,48 @@ int main(int argc, char **argv)
   so.time_stats_ = time_stats;
   so.verb_level_ = verb_level;
 
-  ROS_INFO_STREAM("Error type: " << so.error_type_);
+  std::cout << "[INFO] " << "误差类型: " << so.error_type_ << std::endl;
 
   // Initialiing KDL
-  ROS_INFO("Starting KDL");
+  std::cout << "[INFO] " << "正在启动 KDL" << std::endl;
   BenchmarkKDL kdl_ik(urdf_path, "base_link", "link_ee", ik_solver, max_time,
                       max_error, max_iter, dt);
 
   // Initialiing TRAC-IK
-  ROS_INFO("Starting TRAC-IK");
+  std::cout << "[INFO] " << "正在启动 TRAC-IK" << std::endl;
   BenchmarkTRACIK trac_ik(urdf_path, "base_link", "link_ee", ik_solver,
                           solve_mode, max_time, max_error, max_iter, dt);
 
   // Initialiing COIKS
-  ROS_INFO("Starting CODCS-IK");
+  std::cout << "[INFO] " << "正在启动 CODCS-IK" << std::endl;
   COIKS coiks(urdf_path, "base_link", "link_ee", ik_solver, so, max_time,
               max_error, max_iter, dt);
 
+  const std::string exp_dir =
+      createNextExperimentDir(pkg_path + "/output");
+  std::cout << "[INFO] 实验结果目录: " << exp_dir << std::endl;
+
   if (kdl_enable)
   {
-    ROS_WARN("Running random configurations for KDL");
+    std::cerr << "[WARN] " << "正在对 KDL 运行随机配置测试" << std::endl;
     solveIkFromRandomList(urdf_path, qinit_path, target_path, n_random_config,
-                          &kdl_ik, "link_ee", (print_all & 1));
+                          &kdl_ik, "link_ee", (print_all & 1), robot_id,
+                          exp_dir);
   }
 
   if (tracik_enable)
   {
-    ROS_WARN("Running random configurations for TRAC-IK");
+    std::cerr << "[WARN] " << "正在对 TRAC-IK 运行随机配置测试" << std::endl;
     solveIkFromRandomList(urdf_path, qinit_path, target_path, n_random_config,
-                          &trac_ik, "link_ee", (print_all & 2) >> 1);
+                          &trac_ik, "link_ee", (print_all & 2) >> 1, robot_id,
+                          exp_dir);
   }
 
-  ROS_WARN("Running random configurations for COIKS");
+  std::cerr << "[WARN] " << "正在对 COIKS 运行随机配置测试" << std::endl;
   solveIkFromRandomList(urdf_path, qinit_path, target_path, n_random_config,
-                        &coiks, "link_ee", (print_all & 4) >> 2, robot_id);
-  ROS_INFO("Benchmark finished");
+                        &coiks, "link_ee", (print_all & 4) >> 2, robot_id,
+                        exp_dir);
+  std::cout << "[INFO] 基准测试完成。结果目录: " << exp_dir << std::endl;
 
   return 0;
 }

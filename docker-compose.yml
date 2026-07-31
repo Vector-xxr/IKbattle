@@ -1,0 +1,32 @@
+services:
+  coiks:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile
+    image: coiks:noetic-20.04
+    container_name: coiks-noetic
+    # Keep a long-lived shell container for build + run.
+    stdin_open: true
+    tty: true
+    working_dir: /root/catkin_ws
+    volumes:
+      # Host CoIKS repo (Ubuntu 22.04) -> container
+      - ./:/coiks:rw
+      # Persist catkin build artifacts across restarts
+      - coiks_catkin_build:/root/catkin_ws/build
+      - coiks_catkin_devel:/root/catkin_ws/devel
+      - coiks_catkin_logs:/root/catkin_ws/logs
+    environment:
+      - ROS_MASTER_URI=http://localhost:11311
+      - TZ=Asia/Shanghai
+    # Uncomment if you later need GUI tools (RViz) via X11:
+    # network_mode: host
+    # environment:
+    #   - DISPLAY=${DISPLAY}
+    # volumes:
+    #   - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+volumes:
+  coiks_catkin_build:
+  coiks_catkin_devel:
+  coiks_catkin_logs:

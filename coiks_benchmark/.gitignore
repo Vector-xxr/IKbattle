@@ -1,2 +1,4 @@
 scripts/
 plots/
+output/*
+!output/.gitkeep
