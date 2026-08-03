@@ -7,7 +7,7 @@
 本基准测试在统一条件下评估不同 IK 求解器的性能，包括：
 
 - 每台机器人 10,000 个随机目标位姿
-- 10,000 个随机初始关节配置
+- 10,000 ~~~~个随机初始关节配置
 - 完整 6D 位姿约束（位置 + 姿态）
 - 通过正运动学生成可达目标位姿
 - 标准化测试条件，保证对比公平
@@ -25,6 +25,9 @@ coiks_benchmark/
 │   ├── benchmark.cpp           # 随机位姿 IK 对比主程序
 │   ├── benchmark_path.cpp      # 路径跟踪 IK 对比主程序
 │   └── experiment_output.hpp   # 自动创建 output/001、002… 并拼 CSV 路径
+├── scripts/
+│   ├── viz_urdf.py             # Pinocchio + MeshCat 可视化 URDF
+│   └── requirements-viz.txt    # 可视化脚本 Python 依赖
 ├── launch/
 │   ├── coiks_benchmark.launch       # 启动随机位姿测试
 │   └── coiks_benchmark_path.launch  # 启动路径跟踪测试
@@ -33,20 +36,57 @@ coiks_benchmark/
 └── urdf/                       # 各机器人 URDF 模型
 ```
 
+
+
 ### 源码（`src/`）
 
-| 文件 | 作用 |
-|------|------|
-| `benchmark.cpp` | 主基准程序。封装 KDL、TRAC-IK、CoIKS；按 `robot_id` 加载 URDF 与输入 CSV；统计成功率与耗时，并写出结果 CSV。编译产物：`coiks_benchmark`。 |
-| `benchmark_path.cpp` | 路径跟踪基准。读取 `path_robot_*.csv`，对比 CoIKS 与 TRAC-IK。编译产物：`coiks_benchmark_path`。 |
-| `experiment_output.hpp` | 内部工具：在 `output/` 下创建下一个实验目录（`001`、`002`…），生成结果文件路径。 |
+
+| 文件                      | 作用                                                                                                 |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `benchmark.cpp`         | 主基准程序。封装 KDL、TRAC-IK、CoIKS；按 `robot_id` 加载 URDF 与输入 CSV；统计成功率与耗时，并写出结果 CSV。编译产物：`coiks_benchmark`。 |
+| `benchmark_path.cpp`    | 路径跟踪基准。读取 `path_robot_*.csv`，对比 CoIKS 与 TRAC-IK。编译产物：`coiks_benchmark_path`。                       |
+| `experiment_output.hpp` | 内部工具：在 `output/` 下创建下一个实验目录（`001`、`002`…），生成结果文件路径。                                                |
+
+
+
 
 ### Launch（`launch/`）
 
-| 文件 | 作用 |
-|------|------|
-| `coiks_benchmark.launch` | 配置并启动随机位姿测试。可设 `robot_id`（0–14）、`ik_solver`、时限/误差、是否启用 TRAC-IK/KDL，以及 INVJ/NLO/QP 等参数。 |
-| `coiks_benchmark_path.launch` | 配置并启动路径跟踪测试，参数含义类似，额外使用路径数据。 |
+
+| 文件                            | 作用                                                                                     |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| `coiks_benchmark.launch`      | 配置并启动随机位姿测试。可设 `robot_id`（0–14）、`ik_solver`、时限/误差、是否启用 TRAC-IK/KDL，以及 INVJ/NLO/QP 等参数。 |
+| `coiks_benchmark_path.launch` | 配置并启动路径跟踪测试，参数含义类似，额外使用路径数据。                                                           |
+
+
+
+
+### URDF 可视化（`scripts/`）
+
+用 **Pinocchio + MeshCat** 回放基准 CSV（与 C++ 解耦，不必改 launch）。脚本会把 URDF 里旧的绝对 mesh 路径改写到本仓库 `urdf/`。
+
+| `--mode` | 数据 | 行为 |
+|----------|------|------|
+| `csv` | `data/path_robot_<robot_id>.csv` | 沿路径点连续运动（简易 IK，种子为 `qinit[0]`） |
+| `random` | `qinit_*` + `targets_*` | 从 `--index` 起播 `--count` 道题：先 `q_init` 再 `target`（瞬切）；题内间隔 `--dt`，跨题间隔 `2*dt` |
+| `neutral` | 无 | 中性位静态 |
+
+参数：`--index` 起始下标，`--count` 连续条数（`csv` 默认最多 200，`random` 默认最多 20），`--dt` 时间间隔（`csv` 默认 0.03，`random` 默认 0.5）。
+
+```bash
+cd coiks_benchmark
+pip install -r scripts/requirements-viz.txt   # 首次：meshcat + pin
+
+# 路径跟踪数据（对应 coiks_benchmark_path.launch）
+python3 scripts/viz_urdf.py --robot_id 7 --mode csv --index 0 --count 200
+
+# 随机 IK 数据（对应 coiks_benchmark.launch）：init/target 交叉并标注
+python3 scripts/viz_urdf.py --robot_id 7 --mode random --index 10 --count 5 --dt 0.5
+
+python3 scripts/viz_urdf.py --robot_id 1 --mode neutral
+```
+
+说明：Docker 镜像侧重 C++ Pinocchio，不一定自带 Python 绑定；可视化建议在宿主机运行。
 
 常用启动：
 
@@ -60,11 +100,15 @@ roslaunch coiks_benchmark coiks_benchmark_path.launch
 
 ### 数据（`data/`）
 
-| 文件模式 | 作用 |
-|----------|------|
-| `qinit_robot_<name>_random_10000samples.csv` | 随机初始关节配置（每台机器人 1 万组） |
-| `targets_robot_<name>_random_10000samples.csv` | 对应可达目标位姿（由 FK 生成，保证可达） |
-| `path_robot_<id>.csv` | 路径跟踪用的连续目标序列（`id` 对应 `robot_id` 0–14） |
+
+| 文件模式                                           | 作用                                    |
+| ---------------------------------------------- | ------------------------------------- |
+| `qinit_robot_<name>_random_10000samples.csv`   | 随机初始关节配置（每台机器人 1 万组）                  |
+| `targets_robot_<name>_random_10000samples.csv` | 对应可达目标位姿（由 FK 生成，保证可达）                |
+| `path_robot_<id>.csv`                          | 路径跟踪用的连续目标序列（`id` 对应 `robot_id` 0–14） |
+
+
+
 
 ### 结果（`output/`）
 
@@ -88,18 +132,22 @@ coiks_benchmark/output/
   - `r{robot_id}`：对应 launch 中的机器人编号（如 `r1` = VS050）
 - Docker 下容器路径 `/root/catkin_ws/src/coiks_benchmark/output/` 即宿主机仓库中的本目录。
 
+
+
 #### CoIKS 结果 CSV 列含义
 
-| 列名 | 含义 |
-|------|------|
-| `idx` | 样本编号 |
-| `res` | `0` 成功，非 `0` 失败 |
-| `time` | 耗时（微秒） |
+
+| 列名          | 含义                      |
+| ----------- | ----------------------- |
+| `idx`       | 样本编号                    |
+| `res`       | `0` 成功，非 `0` 失败         |
+| `time`      | 耗时（微秒）                  |
 | `solver_id` | 并发时哪个实例找到该解（如 INVJ 0–3） |
-| `sol_id` | 本次求解中该解在解集中的登记序号 |
-| `error` | 末端位姿误差 |
-| `q_init` | 初始关节角（弧度） |
-| `q_sol` | 求出的关节角（弧度） |
+| `sol_id`    | 本次求解中该解在解集中的登记序号        |
+| `error`     | 末端位姿误差                  |
+| `q_init`    | 初始关节角（弧度）               |
+| `q_sol`     | 求出的关节角（弧度）              |
+
 
 KDL / TRAC-IK 的 CSV 列更简单：`idx,time,q_init,q_sol`。
 
@@ -113,10 +161,14 @@ KDL / TRAC-IK 的 CSV 列更简单：`idx,time,q_init,q_sol`。
 
 ### 包配置
 
-| 文件 | 作用 |
-|------|------|
+
+| 文件               | 作用                                                       |
+| ---------------- | -------------------------------------------------------- |
 | `CMakeLists.txt` | 声明依赖（coiks、trac_ik、KDL、Pinocchio、CasADi、nlopt 等），编译两个节点。 |
-| `package.xml` | ROS 包名、许可证与运行/编译依赖。 |
+| `package.xml`    | ROS 包名、许可证与运行/编译依赖。                                      |
+
+
+
 
 ## 终端输出
 
@@ -136,23 +188,25 @@ coiks_invj_multi 找到 10000 个解（100%），...
 
 覆盖 15 种商业机器人，涵盖多种运动学构型：
 
-| robot_id | 机器人型号 | 厂商 | 自由度 | 类型 |
-|----------|------------|------|--------|------|
-| 0 | HSR | Toyota Motor Corp. | 5 | 服务机器人 |
-| 1 | VS050 | DENSO Robotics | 6 | 工业机器人 |
-| 2 | xArm6 | UFactory | 6 | 协作机器人 |
-| 3 | IRB140 | ABB | 6 | 工业机器人 |
-| 4 | Jaco | Kinova | 6 | 辅助机器人 |
-| 5 | UR-5 | Universal Robots | 6 | 协作机器人 |
-| 6 | UR-10 | Universal Robots | 6 | 协作机器人 |
-| 7 | Gen3 | Kinova Robotics | 7 | 研究平台 |
-| 8 | LBR iiwa | KUKA | 7 | 协作机器人 |
-| 9 | xArm7 | UFactory | 7 | 协作机器人 |
-| 10 | Panda | Franka Emika | 7 | 研究平台 |
-| 11 | Sawyer | Rethink Robotics | 7 | 协作机器人 |
-| 12 | Yumi | ABB | 7 | 双臂机器人 |
-| 13 | Fetch | Fetch Robotics | 8 | 移动操作臂 |
-| 14 | Tiago | PAL Robotics | 8 | 服务机器人 |
+
+| robot_id | 机器人型号    | 厂商                 | 自由度 | 类型    |
+| -------- | -------- | ------------------ | --- | ----- |
+| 0        | HSR      | Toyota Motor Corp. | 5   | 服务机器人 |
+| 1        | VS050    | DENSO Robotics     | 6   | 工业机器人 |
+| 2        | xArm6    | UFactory           | 6   | 协作机器人 |
+| 3        | IRB140   | ABB                | 6   | 工业机器人 |
+| 4        | Jaco     | Kinova             | 6   | 辅助机器人 |
+| 5        | UR-5     | Universal Robots   | 6   | 协作机器人 |
+| 6        | UR-10    | Universal Robots   | 6   | 协作机器人 |
+| 7        | Gen3     | Kinova Robotics    | 7   | 研究平台  |
+| 8        | LBR iiwa | KUKA               | 7   | 协作机器人 |
+| 9        | xArm7    | UFactory           | 7   | 协作机器人 |
+| 10       | Panda    | Franka Emika       | 7   | 研究平台  |
+| 11       | Sawyer   | Rethink Robotics   | 7   | 协作机器人 |
+| 12       | Yumi     | ABB                | 7   | 双臂机器人 |
+| 13       | Fetch    | Fetch Robotics     | 8   | 移动操作臂 |
+| 14       | Tiago    | PAL Robotics       | 8   | 服务机器人 |
+
 
 在 `coiks_benchmark.launch` / `coiks_benchmark_path.launch` 中设置 `robot_id`（0–14）即可切换上述机器人。
 
@@ -162,3 +216,4 @@ coiks_invj_multi 找到 10000 个解（100%），...
 - TracIK（`tracik_enable`）
 - Orocos KDL（`kdl_enable`）
 - INVJ-RR（可作为 CoIKS 单求解器变体）
+

@@ -1,4 +1,4 @@
-scripts/
+scripts/__pycache__/
 plots/
 output/*
 !output/.gitkeep

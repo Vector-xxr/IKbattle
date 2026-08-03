@@ -1,0 +1,4 @@
+# MeshCat 可视化脚本依赖（Python）
+# 用法: pip install -r scripts/requirements-viz.txt
+meshcat>=0.3
+pin>=2.6
