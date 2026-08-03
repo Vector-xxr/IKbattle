@@ -803,29 +803,29 @@ int main(int argc, char **argv)
     nlo_warm_start = "yes";
   }
 
-  //* QP variables
+  //* QP variables（与 launch / benchmark_path 一致，使用 hqp_* 参数名）
   double qp_K_t1;
-  if (!nh.getParam("qp_K_t1", qp_K_t1))
+  if (!nh.getParam("hqp_K_t1", qp_K_t1))
   {
-    qp_K_t1 = 1.0;
+    qp_K_t1 = 1000.0;
   }
   double qp_Kr_t1;
-  if (!nh.getParam("qp_Kr_t1", qp_Kr_t1))
+  if (!nh.getParam("hqp_Kr_t1", qp_Kr_t1))
   {
-    qp_Kr_t1 = 0.00001;
+    qp_Kr_t1 = 1.0;
   }
   double qp_Kw_p1;
-  if (!nh.getParam("qp_Kw_p1", qp_Kw_p1))
+  if (!nh.getParam("hqp_Kw_p1", qp_Kw_p1))
   {
-    qp_Kw_p1 = 0.00001;
+    qp_Kw_p1 = 1e-8;
   }
   double qp_Kd_p1;
-  if (!nh.getParam("qp_Kd_p1", qp_Kd_p1))
+  if (!nh.getParam("hqp_Kd_p1", qp_Kd_p1))
   {
-    qp_Kd_p1 = 0.00001;
+    qp_Kd_p1 = 1e-8;
   }
   bool qp_warm_start;
-  if (!nh.getParam("qp_warm_start", qp_warm_start))
+  if (!nh.getParam("hqp_warm_start", qp_warm_start))
   {
     qp_warm_start = true;
   }
@@ -1023,6 +1023,7 @@ int main(int argc, char **argv)
   so.qp_K_t1_ = qp_K_t1;
   so.qp_Kr_t1_ = qp_Kr_t1;
   so.qp_Kw_p1_ = qp_Kw_p1;
+  so.qp_Kd_p1_ = qp_Kd_p1;
   so.qp_warm_start_ = qp_warm_start;
 
   so.time_stats_ = time_stats;

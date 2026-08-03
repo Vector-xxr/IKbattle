@@ -136,23 +136,25 @@ coiks_invj_multi 找到 10000 个解（100%），...
 
 覆盖 15 种商业机器人，涵盖多种运动学构型：
 
-| 机器人型号 | 厂商 | 自由度 | 类型 |
-|------------|------|--------|------|
-| HSR | Toyota Motor Corp. | 5 | 服务机器人 |
-| VS050 | DENSO Robotics | 6 | 工业机器人 |
-| xArm6 | UFactory | 6 | 协作机器人 |
-| IRB140 | ABB | 6 | 工业机器人 |
-| Jaco | Kinova | 6 | 辅助机器人 |
-| UR-5 | Universal Robots | 6 | 协作机器人 |
-| UR-10 | Universal Robots | 6 | 协作机器人 |
-| Gen3 | Kinova Robotics | 7 | 研究平台 |
-| LBR iiwa | KUKA | 7 | 协作机器人 |
-| xArm7 | UFactory | 7 | 协作机器人 |
-| Panda | Franka Emika | 7 | 研究平台 |
-| Sawyer | Rethink Robotics | 7 | 协作机器人 |
-| Yumi | ABB | 7 | 双臂机器人 |
-| Fetch | Fetch Robotics | 8 | 移动操作臂 |
-| Tiago | PAL Robotics | 8 | 服务机器人 |
+| robot_id | 机器人型号 | 厂商 | 自由度 | 类型 |
+|----------|------------|------|--------|------|
+| 0 | HSR | Toyota Motor Corp. | 5 | 服务机器人 |
+| 1 | VS050 | DENSO Robotics | 6 | 工业机器人 |
+| 2 | xArm6 | UFactory | 6 | 协作机器人 |
+| 3 | IRB140 | ABB | 6 | 工业机器人 |
+| 4 | Jaco | Kinova | 6 | 辅助机器人 |
+| 5 | UR-5 | Universal Robots | 6 | 协作机器人 |
+| 6 | UR-10 | Universal Robots | 6 | 协作机器人 |
+| 7 | Gen3 | Kinova Robotics | 7 | 研究平台 |
+| 8 | LBR iiwa | KUKA | 7 | 协作机器人 |
+| 9 | xArm7 | UFactory | 7 | 协作机器人 |
+| 10 | Panda | Franka Emika | 7 | 研究平台 |
+| 11 | Sawyer | Rethink Robotics | 7 | 协作机器人 |
+| 12 | Yumi | ABB | 7 | 双臂机器人 |
+| 13 | Fetch | Fetch Robotics | 8 | 移动操作臂 |
+| 14 | Tiago | PAL Robotics | 8 | 服务机器人 |
+
+在 `coiks_benchmark.launch` / `coiks_benchmark_path.launch` 中设置 `robot_id`（0–14）即可切换上述机器人。
 
 ## 对比求解器
 

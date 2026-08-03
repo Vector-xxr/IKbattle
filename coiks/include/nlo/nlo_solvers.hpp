@@ -421,7 +421,8 @@ public:
     opts["ipopt.print_level"] = verb_level_;               // 0
     opts["ipopt.print_timing_statistics"] = time_stats_;   //"no"
     opts["ipopt.warm_start_init_point"] = nlo_warm_start_; //"no"
-    opts["ipopt.max_wall_time"] = max_time_;               //"no"
+    // IPOPT 3.14+ 用 max_wall_time；本环境为 3.11，需用 max_cpu_time
+    opts["ipopt.max_cpu_time"] = max_time_;
     if (nlo_concurrent_)
       opts["ipopt.max_iter"] = nlo_concurrent_iterations_;
     else

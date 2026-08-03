@@ -36,6 +36,8 @@ CoIKS（Concurrent Inverse Kinematics Solver）是一套面向高效、稳健逆
 
 Docker 环境与编译说明见仓库根目录下的 [docker/README.md](../docker/README.md)。
 
+三类底层 IK（INVJ / QP / NLO）的原理笔记见 [include/README.md](include/README.md)。
+
 ### 与基准测试的关系
 
 本目录是 IK 求解库本身；批量评测、CSV 结果保存见 [coiks_benchmark/README.md](../coiks_benchmark/README.md)。  

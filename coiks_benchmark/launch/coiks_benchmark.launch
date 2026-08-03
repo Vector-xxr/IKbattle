@@ -3,13 +3,13 @@
     <!-- ========== 机器人与求解器选择 ========== -->
     <!-- 测试机器人编号 [0-14]：
          0:HSR 1:VS050 2:xArm6 3:IRB140 4:Jaco 5:UR5 6:UR10
-         7:Gen3 8:iiwa 9:xArm7 10:Panda 11:Sawyer 12:Yumi 13:Fetch 14:Tiago -->
-    <param name="robot_id" value="1"/>
+         7:Gen3 8:iiwa 9:xArm7 10:Panda 11:Sawyer 12:Yumi 13:Fetch 14:Tiago 7-12为7自由度-->
+    <param name="robot_id" value="7"/>
 
     <!-- IK 求解器名称，常用选项：
          单求解器: coiks_invj / coiks_qp / coiks_nlo
          并发组合: coiks_invj_multi / coiks_invj_qp / coiks_invj_nlo / coiks_qp_nlo / coiks_all -->
-    <arg name="ik_solver" default="coiks_invj_multi"/>
+    <arg name="ik_solver" default="coiks_invj_nlo"/>
     <param name="ik_solver" value="$(arg ik_solver)" type="str"/>
 
     <!-- ========== 求解通用参数 ========== -->
