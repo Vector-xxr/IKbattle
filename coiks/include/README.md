@@ -225,7 +225,37 @@ subject to  q_ll <= q_init + q_delta <= q_ul
 
 ---
 
-## 8. 延伸阅读
+## 8. 附录：基准测试中的 QP / NLO 运行参数注意
+
+### 8.1 QP（`coiks_benchmark`）
+
+Launch 与 `benchmark_path.cpp` 使用 ROS 参数名 **`hqp_*`**；
+随机基准 `benchmark.cpp` 必须读同一套名字，并写入 `SolverOptions`：
+
+| Launch / ROS 参数 | `SolverOptions` 字段 | 含义 |
+|-------------------|----------------------|------|
+| `hqp_K_t1` | `qp_K_t1_` | 任务跟踪权重 |
+| `hqp_Kr_t1` | `qp_Kr_t1_` | 笛卡尔速度残差系数 |
+| `hqp_Kd_p1` | `qp_Kd_p1_` | 关节阻尼 / 正则 |
+| `hqp_Kw_p1` | `qp_Kw_p1_` | 松弛惩罚 |
+| `hqp_warm_start` | `qp_warm_start_` | OSQP warm start |
+
+若误读成 `qp_*` 或漏赋 `qp_Kd_p1_`，日志里会出现 `K=1`、`Kd` 为垃圾值，成功率可到 0%。
+
+### 8.2 NLO（IPOPT）
+
+本仓库 Docker 常见 **IPOPT 3.11.x**，不支持 `ipopt.max_wall_time`（需 3.14+）。
+NLO 初始化应使用：
+
+```text
+ipopt.max_cpu_time = max_time
+```
+
+否则 CasADi 会抛 `No such IPOPT option: max_wall_time` 并进程退出。
+
+---
+
+## 9. 延伸阅读
 
 - 包级说明：[../README.md](../README.md)  
 - 基准与 CSV 输出：[../../coiks_benchmark/README.md](../../coiks_benchmark/README.md)  
