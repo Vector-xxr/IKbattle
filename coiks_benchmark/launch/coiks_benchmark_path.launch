@@ -1,10 +1,11 @@
 <launch>
 
     <!-- ========== 机器人与求解器选择 ========== -->
-    <!-- 测试机器人编号 [0-14]：
+    <!-- 测试机器人编号 [0-15]：
          0:HSR 1:VS050 2:xArm6 3:IRB140 4:Jaco 5:UR5 6:UR10
-         7:Gen3 8:iiwa 9:xArm7 10:Panda 11:Sawyer 12:Yumi 13:Fetch 14:Tiago -->
-    <param name="robot_id" value="7"/>
+         7:Gen3 8:iiwa 9:xArm7 10:Panda 11:Sawyer 12:Yumi 13:Fetch 14:Tiago
+         15:OpenArm（上半身 URDF，path 只控右臂；无 random 全量样本） -->
+    <param name="robot_id" value="15"/>
     <!-- 路径跟踪：从 qinit CSV 取哪一行作为整条路径的初始种子（point_id） -->
     <param name="point_id" value="0"/>
 

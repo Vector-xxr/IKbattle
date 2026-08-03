@@ -14,6 +14,7 @@
 
     cd coiks_benchmark
     python3 scripts/viz_urdf.py --robot_id 7 --mode csv --index 0 --count 200
+    python3 scripts/viz_urdf.py --robot_id 15 --mode csv --index 0 --count 200 --fps 120
     python3 scripts/viz_urdf.py --robot_id 7 --mode random --index 10 --count 5 --dt 0.5
     python3 scripts/viz_urdf.py --robot_id 1 --mode neutral
 """
@@ -50,6 +51,7 @@ ROBOTS = {
     12: ("abb/yumi/yumi.urdf", "yumi"),
     13: ("fetch/fetch_arm.urdf", "fetch"),
     14: ("tiago/tiago.urdf", "tiago"),
+    15: ("openarm/openarm.urdf", "openarm"),
 }
 
 OLD_MESH_PREFIXES = (
@@ -81,7 +83,7 @@ def rewrite_mesh_paths(urdf_path: Path) -> Path:
 def resolve_robot(robot_id: int) -> tuple[Path, str]:
     if robot_id not in ROBOTS:
         raise SystemExit(
-            f"robot_id 须在 0..14，收到 {robot_id}。可选: "
+            f"robot_id 须在 0..15，收到 {robot_id}。可选: "
             + ", ".join(f"{i}:{ROBOTS[i][0]}" for i in ROBOTS)
         )
     rel, key = ROBOTS[robot_id]
@@ -185,15 +187,18 @@ def load_target_q(name_key: str, nq: int):
     return np.asarray(rows, dtype=float)
 
 
-def clamp_slice(index: int, count: int | None, n: int, default_count: int):
-    """返回合法 [start, end) 与实际 count。"""
+def clamp_slice(index: int, count: int | None, n: int, default_count: int | None):
+    """返回合法 [start, end) 与实际 count。
+
+    count 为 None 时：default_count 为 None 则播完剩余；否则 min(default_count, 剩余)。
+    """
     if n <= 0:
         raise ValueError("数据长度为 0")
     if index < 0 or index >= n:
         raise IndexError(f"index={index} 越界（有效 0..{n - 1}）")
     remain = n - index
     if count is None:
-        count = min(default_count, remain)
+        count = remain if default_count is None else min(default_count, remain)
     else:
         count = max(0, min(count, remain))
     if count == 0:
@@ -229,8 +234,20 @@ def find_ee_frame_id(model):
     return model.nframes - 1
 
 
-def ik_to_pose(model, data, frame_id, q, X_des, max_iter=IK_MAX_ITER, tol=IK_TOL):
-    """阻尼伪逆迭代 IK。成功返回 (True, q_new)，失败 (False, q)。"""
+def ik_to_pose(
+    model,
+    data,
+    frame_id,
+    q,
+    X_des,
+    max_iter=IK_MAX_ITER,
+    tol=IK_TOL,
+    active_q_idx=None,
+):
+    """阻尼伪逆迭代 IK。成功返回 (True, q_new)，失败 (False, q)。
+
+    active_q_idx: 若给定，仅更新这些 q 下标（用于双臂模型只动右臂）。
+    """
     import pinocchio as pin
     import numpy as np
 
@@ -246,15 +263,46 @@ def ik_to_pose(model, data, frame_id, q, X_des, max_iter=IK_MAX_ITER, tol=IK_TOL
         J = pin.computeFrameJacobian(
             model, data, q, frame_id, pin.ReferenceFrame.LOCAL
         )
-        JJt = J @ J.T
-        damp = IK_DAMP * np.eye(6)
-        v = J.T @ np.linalg.solve(JJt + damp, err)
+        if active_q_idx is not None:
+            J_full = J
+            J = J_full[:, active_q_idx]
+            JJt = J @ J.T
+            damp = IK_DAMP * np.eye(6)
+            v_act = J.T @ np.linalg.solve(JJt + damp, err)
+            v = np.zeros(model.nv)
+            # OpenArm: nq==nv (no freeflyer); map q idx -> v idx 1:1
+            for k, qi in enumerate(active_q_idx):
+                v[qi] = v_act[k]
+        else:
+            JJt = J @ J.T
+            damp = IK_DAMP * np.eye(6)
+            v = J.T @ np.linalg.solve(JJt + damp, err)
         q = pin.integrate(model, q, v)
     pin.framesForwardKinematics(model, data, q)
     oMf = data.oMf[frame_id]
     err = pin.log(oMf.actInv(X_des)).vector
     ok = np.linalg.norm(err) < tol * 10
     return ok, q
+
+
+def active_q_indices_for_robot(model, name_key: str | None):
+    """OpenArm path 只控右臂 7 轴；其它机器人用全自由度。"""
+    import numpy as np
+
+    if name_key != "openarm":
+        return None
+    idxs = []
+    for j in range(1, model.njoints):
+        name = model.names[j]
+        if name.startswith("openarm_right_joint") and model.joints[j].nq == 1:
+            idxs.append(model.joints[j].idx_q)
+    if len(idxs) != 7:
+        print(
+            f"[WARN] openarm 右臂关节数={len(idxs)}（期望 7），改用全自由度 IK",
+            file=sys.stderr,
+        )
+        return None
+    return np.asarray(idxs, dtype=int)
 
 
 def print_viewer_url(viz) -> None:
@@ -293,16 +341,21 @@ def run_path_animation(
     import numpy as np
 
     poses = load_path(robot_id)
-    start, end, n_play = clamp_slice(index, count, len(poses), default_count=200)
+    start, end, n_play = clamp_slice(index, count, len(poses), default_count=None)
+    hz_info = f", ~{1.0 / dt:.1f} Hz" if dt > 0 else ""
     print(
         f"[INFO] path 模式: path_robot_{robot_id}.csv "
-        f"点 [{start}, {end}) 共 {n_play} 个，dt={dt}"
+        f"点 [{start}, {end}) 共 {n_play} 个，dt={dt}{hz_info}"
     )
 
     if name_key is not None:
         try:
             qinit = load_qinit(name_key)
             q = qinit[0].copy()
+            if q.shape[0] != model.nq:
+                raise ValueError(
+                    f"qinit 关节数 {q.shape[0]} != nq={model.nq}（path 链种子）"
+                )
             print(f"[INFO] 路径 IK 种子: qinit[0]")
         except Exception as e:
             print(f"[WARN] 无法读 qinit，改用 neutral: {e}", file=sys.stderr)
@@ -314,10 +367,16 @@ def run_path_animation(
         raise ValueError(f"种子 q 维数 {q.shape[0]} != nq={model.nq}")
 
     viz.display(q)
+    active_q = active_q_indices_for_robot(model, name_key)
+    if active_q is not None:
+        print(f"[INFO] path IK 仅更新关节下标: {active_q.tolist()}")
     fail = 0
+    t_next = time.perf_counter()
     for k, (xyz, quat) in enumerate(poses[start:end]):
         X_des = se3_from_xyz_quat_xyzw(xyz, quat)
-        ok, q_new = ik_to_pose(model, data, frame_id, q, X_des)
+        ok, q_new = ik_to_pose(
+            model, data, frame_id, q, X_des, active_q_idx=active_q
+        )
         if ok:
             q = q_new
             viz.display(q)
@@ -326,7 +385,14 @@ def run_path_animation(
             print(f"[WARN] path IK failed at k={start + k}", file=sys.stderr)
         if (k + 1) % 20 == 0 or k == 0:
             print(f"[path] k={start + k}/{end - 1}")
-        time.sleep(dt)
+        if dt > 0:
+            t_next += dt
+            delay = t_next - time.perf_counter()
+            if delay > 0:
+                time.sleep(delay)
+            else:
+                # 跟不上目标帧率时重同步，避免越积越多
+                t_next = time.perf_counter()
 
     print(f"[INFO] path 播放结束（失败 {fail}/{n_play}）")
     wait_exit()
@@ -381,7 +447,7 @@ def main() -> int:
         "--robot_id",
         type=int,
         default=1,
-        help="机器人编号 0–14（与 launch 中 robot_id 一致），默认 1",
+        help="机器人编号 0–15（与 launch 中 robot_id 一致），默认 1",
     )
     ap.add_argument(
         "--urdf",
@@ -406,7 +472,7 @@ def main() -> int:
         "--count",
         type=int,
         default=None,
-        help="连续条数：csv 默认 min(200,剩余)，random 默认 min(20,剩余)",
+        help="连续条数：csv 不写则从 index 播到文件末尾；random 默认 min(20,剩余)",
     )
     ap.add_argument(
         "--dt",
@@ -415,13 +481,26 @@ def main() -> int:
         help="时间间隔秒：csv 默认 0.03；random 默认 0.5（跨题为 2*dt）",
     )
     ap.add_argument(
+        "--fps",
+        type=float,
+        default=None,
+        help="播放帧率（与 --dt 互斥优先）：csv 下 --fps 120 等价 dt=1/120",
+    )
+    ap.add_argument(
         "--no-open",
         action="store_true",
         help="不自动打开浏览器",
     )
     args = ap.parse_args()
 
-    if args.dt is None:
+    if args.fps is not None:
+        if args.fps <= 0:
+            print("[ERROR] --fps 须 > 0", file=sys.stderr)
+            return 1
+        if args.dt is not None:
+            print("[WARN] 同时指定 --fps 与 --dt，以 --fps 为准", file=sys.stderr)
+        args.dt = 1.0 / args.fps
+    elif args.dt is None:
         args.dt = 0.5 if args.mode == "random" else 0.03
 
     try:

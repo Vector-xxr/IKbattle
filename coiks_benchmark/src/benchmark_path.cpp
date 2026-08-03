@@ -364,8 +364,9 @@ int main(int argc, char **argv)
   std::string urdf_path, qinit_path, path_file;
 
   std::vector<std::string> robot_names = {
-    "hsr", "vs050", "xarm6", "irb140", "jaco", "ur5", "ur10", 
-    "gen3", "iiwa", "xarm7", "panda", "sawyer", "yumi", "fetch", "tiago"
+    "hsr", "vs050", "xarm6", "irb140", "jaco", "ur5", "ur10",
+    "gen3", "iiwa", "xarm7", "panda", "sawyer", "yumi", "fetch", "tiago",
+    "openarm"
   };
 
   std::string robot_name_str = robot_names[robot_id];
@@ -474,6 +475,13 @@ int main(int argc, char **argv)
     urdf_path = pkg_path + std::string("/urdf/") + "tiago/tiago.urdf";
     qinit_path = pkg_path + std::string("/data/") +
                  "qinit_robot_tiago_random_10000samples.csv";
+    path_file = pkg_path + "/data/path_robot_" + std::to_string(robot_id) + ".csv";
+    break;
+
+  case 15:
+    urdf_path = pkg_path + std::string("/urdf/") + "openarm/openarm.urdf";
+    qinit_path = pkg_path + std::string("/data/") +
+                 "qinit_robot_openarm_random_10000samples.csv";
     path_file = pkg_path + "/data/path_robot_" + std::to_string(robot_id) + ".csv";
     break;
 
