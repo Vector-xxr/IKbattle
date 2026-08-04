@@ -14,4 +14,4 @@ catkin_make -DCMAKE_BUILD_TYPE=Release \
 
 source devel/setup.bash
 echo "[完成] 工作空间编译成功。示例:"
-echo "  roslaunch coiks_benchmark coiks_benchmark.launch"
+echo "  roslaunch coiks_benchmark coiks_benchmark_path.launch"

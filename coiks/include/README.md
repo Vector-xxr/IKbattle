@@ -227,10 +227,10 @@ subject to  q_ll <= q_init + q_delta <= q_ul
 
 ## 8. 附录：基准测试中的 QP / NLO 运行参数注意
 
-### 8.1 QP（`coiks_benchmark`）
+### 8.1 QP（path 基准）
 
-Launch 与 `benchmark_path.cpp` 使用 ROS 参数名 **`hqp_*`**；
-随机基准 `benchmark.cpp` 必须读同一套名字，并写入 `SolverOptions`：
+Launch（`coiks_benchmark_path.launch`）与 `benchmark_path.cpp` 使用 ROS 参数名 **`hqp_*`**，
+并写入 `SolverOptions`：
 
 | Launch / ROS 参数 | `SolverOptions` 字段 | 含义 |
 |-------------------|----------------------|------|

@@ -9,7 +9,7 @@ CoIKS（Concurrent Inverse Kinematics Solver）是一套通过多求解器并发
 本仓库主要包含以下目录：
 
 - **coiks/**：CoIKS 求解器核心实现，通过并发计算求解逆运动学。目录内另有独立 README，介绍功能、依赖、使用方法以及求解器架构与配置等技术细节。
-- **coiks_benchmark/**：基准测试脚本与配置，用于将 CoIKS 与 TRAC-IK、Orocos KDL 等进行对比。测试覆盖 15 种机器人模型；运行日志为中文，结果 CSV 写入包内 `output/001`、`002`… 目录。详见 [coiks_benchmark/README.md](coiks_benchmark/README.md)。
+- **coiks_benchmark/**：路径跟踪基准与可视化，用于将 CoIKS 与 TRAC-IK 等对比。覆盖多种机器人模型（含 OpenArm）；运行日志为中文，结果 CSV 写入包内 `output/001`、`002`… 目录。详见 [coiks_benchmark/README.md](coiks_benchmark/README.md)。
 - **trac_ik_lib/**：TRAC-IK 子模块，用于在基准测试中与 CoIKS 对比。使用前需初始化该子模块以获取 TRAC-IK 功能。（若使用本仓库 Docker 环境，也可直接依赖镜像内的 `ros-noetic-trac-ik`，不必初始化此子模块。）
 - **docker/**：Ubuntu 20.04 + ROS Noetic 的 Docker 配置与使用说明，适合在 Ubuntu 22.04 等宿主机上运行本项目。详见 [docker/README.md](docker/README.md)。
 

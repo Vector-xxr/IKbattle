@@ -39,6 +39,127 @@
 using namespace coiks;
 namespace pin = pinocchio;
 
+class BenchmarkKDL : public IkSolver
+{
+  public:
+  BenchmarkKDL(const std::string &_urdf_file, const std::string &_base_link,
+               const std::string &_ee_link, const std::string &_ik_solver,
+               double _max_time, double _max_error, int _max_iter, double _dt)
+      : initialized_(false), max_error_(_max_error), max_iter_(_max_iter),
+        urdf_file_(_urdf_file), base_link_(_base_link), ee_link_(_ee_link),
+        dt_(_dt), solver_name_("kdl")
+  {
+    initialize_kdl();
+  }
+
+  ~BenchmarkKDL() {}
+
+  bool initialize_kdl()
+  {
+    std::cout << "正在初始化 KDL，最大误差: " << max_error_
+              << " 最大迭代次数:" << max_iter_ << " 时间步长:" << dt_ << std::endl;
+
+    if (!kdl_parser::treeFromFile(urdf_file_, kdl_tree_))
+    {
+      std::cerr << "[ERROR] " << "构建 KDL 树失败" << std::endl;
+      return false;
+    }
+    bool exit_value = kdl_tree_.getChain(base_link_, ee_link_, kdl_chain_);
+    (void)exit_value;
+    n_joints_ = kdl_chain_.getNrOfJoints();
+    qtmp_.resize(kdl_chain_.getNrOfJoints());
+    nominal_.resize(kdl_chain_.getNrOfJoints());
+    ll_.resize(kdl_chain_.getNrOfJoints());
+    ul_.resize(kdl_chain_.getNrOfJoints());
+
+    pin::Model model_;
+    pin::urdf::buildModel(urdf_file_, model_);
+
+    q_ul_ = model_.upperPositionLimit;
+    q_ll_ = model_.lowerPositionLimit;
+
+    for (int i = 0; i < kdl_chain_.getNrOfJoints(); i++)
+    {
+      ll_.data(i) = q_ll_[i];
+      ul_.data(i) = q_ul_[i];
+    }
+
+    assert(kdl_chain_.getNrOfJoints() == ll_.data.size());
+    assert(kdl_chain_.getNrOfJoints() == ul_.data.size());
+
+    kdl_fk_solver_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_));
+    kdl_vik_solver_.reset(new KDL::ChainIkSolverVel_pinv(kdl_chain_));
+    kdl_ik_solver_.reset(new KDL::ChainIkSolverPos_NR_JL(
+        kdl_chain_, ll_, ul_, *kdl_fk_solver_, *kdl_vik_solver_, max_iter_,
+        max_error_));
+
+    for (uint j = 0; j < nominal_.data.size(); j++)
+    {
+      nominal_(j) = (ll_(j) + ul_(j)) / 2.0;
+    }
+    std::cout << "KDL 初始化完成" << std::endl;
+    initialized_ = true;
+
+    return true;
+  }
+
+  int IkSolve(const VectorXd q_init, const pin::SE3 &x_Fee_d, VectorXd &q_out)
+  {
+    int           rc;
+    KDL::JntArray qd(n_joints_);
+    KDL::Frame    ee;
+
+    Affine3d Tdes;
+    Tdes.linear() = x_Fee_d.rotation();
+    Tdes.translation() = x_Fee_d.translation();
+
+    tf::transformEigenToKDL(Tdes, ee);
+
+    // Path tracking: warm-start from previous / qinit seed (not mid-range nominal)
+    KDL::JntArray q_init_kdl(n_joints_);
+    for (int i = 0; i < n_joints_; ++i)
+      q_init_kdl(i) = q_init(i);
+
+    rc = kdl_ik_solver_->CartToJnt(q_init_kdl, ee, qd);
+
+    if (rc >= 0)
+    {
+      q_out = VectorXd::Map(&qd.data[0], qd.data.size());
+      return 0;
+    }
+    return 1;
+  }
+
+  int         get_n_joints() { return n_joints_; }
+  std::string get_solver_name() { return solver_name_; }
+
+  private:
+  KDL::Tree  kdl_tree_;
+  KDL::Chain kdl_chain_;
+
+  KDL::JntArray nominal_;
+  KDL::JntArray qtmp_;
+  KDL::JntArray ll_, ul_;
+
+  std::unique_ptr<KDL::ChainFkSolverPos_recursive> kdl_fk_solver_;
+  std::unique_ptr<KDL::ChainIkSolverVel_pinv>      kdl_vik_solver_;
+  std::unique_ptr<KDL::ChainIkSolverPos_NR_JL>     kdl_ik_solver_;
+
+  std::string urdf_file_;
+  std::string base_link_;
+  std::string ee_link_;
+  VectorXd    q_ul_;
+  VectorXd    q_ll_;
+
+  int         n_joints_;
+  std::string solver_name_;
+  int         max_iter_;
+  double      max_error_;
+
+  bool   initialized_;
+  double dt_;
+};
+
 class BenchmarkTRACIK : public IkSolver
 {
   public:
@@ -284,7 +405,10 @@ void solveIkPath(std::string urdf_file_, std::string qinit_file_,
   for (uint i = 0; i < xdes_list.size(); i++) {
     auto start_it_time = std::chrono::high_resolution_clock::now();
     int res = 1;
-    if (ik_solver->get_solver_name() == "trac_ik") {
+    const bool simple_solver =
+        (ik_solver->get_solver_name() == "trac_ik" ||
+         ik_solver->get_solver_name() == "kdl");
+    if (simple_solver) {
       res = ik_solver->IkSolve(q_seed, xdes_list[i], q_sol_);
     } else {
       res = ik_solver->IkSolve(q_seed, xdes_list[i], q_sol_, bestSolution);
@@ -297,7 +421,7 @@ void solveIkPath(std::string urdf_file_, std::string qinit_file_,
       success_time_it += duration_it.count();
       n_success++;
       q_seed = q_sol_; // Use successful solution as seed for next iteration
-      if (ik_solver->get_solver_name() != "trac_ik") {
+      if (!simple_solver) {
           fout << i << "," << res << "," << duration_it.count() << ","
                << bestSolution.solver_id << "," << bestSolution.solution_id << ","
                << bestSolution.metrics["error"] << "," << q_init.transpose()
@@ -337,7 +461,7 @@ void SigIntHandler(int signal)
 
 int main(int argc, char **argv)
 {
-  std::cout << "[INFO] " << "COIKS 与 TRAC-IK 路径跟踪基准测试" << std::endl;
+  std::cout << "[INFO] " << "COIKS、TRAC-IK 与 KDL 路径跟踪基准测试" << std::endl;
   ros::init(argc, argv, "coiks_benchmark_path");
   ros::NodeHandle nh;
   std::signal(SIGINT, SigIntHandler);
@@ -359,6 +483,9 @@ int main(int argc, char **argv)
 
   bool tracik_enable;
   nh.param("tracik_enable", tracik_enable, true);
+
+  bool kdl_enable;
+  nh.param("kdl_enable", kdl_enable, true);
 
   std::string pkg_path = ros::package::getPath("coiks_benchmark");
   std::string urdf_path, qinit_path, path_file;
@@ -479,7 +606,7 @@ int main(int argc, char **argv)
     break;
 
   case 15:
-    urdf_path = pkg_path + std::string("/urdf/") + "openarm/openarm.urdf";
+    urdf_path = pkg_path + std::string("/urdf/") + "openarm/openarm_right.urdf";
     qinit_path = pkg_path + std::string("/data/") +
                  "qinit_robot_openarm_random_10000samples.csv";
     path_file = pkg_path + "/data/path_robot_" + std::to_string(robot_id) + ".csv";
@@ -532,6 +659,14 @@ int main(int argc, char **argv)
   const std::string exp_dir =
       createNextExperimentDir(pkg_path + "/output");
   std::cout << "[INFO] 实验结果目录: " << exp_dir << std::endl;
+
+  if (kdl_enable) {
+    std::cout << "[INFO] " << "正在启动 KDL" << std::endl;
+    BenchmarkKDL kdl_ik(urdf_path, "base_link", "link_ee", ik_solver_name,
+                        max_time, max_error, max_iter, 1.0);
+    solveIkPath(urdf_path, qinit_path, path_file, point_id, &kdl_ik, "link_ee",
+                false, robot_id, exp_dir);
+  }
 
   if (tracik_enable) {
     std::cout << "[INFO] " << "正在启动 TRAC-IK" << std::endl;

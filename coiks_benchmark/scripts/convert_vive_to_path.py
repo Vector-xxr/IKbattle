@@ -117,7 +117,7 @@ def main() -> int:
     ap.add_argument(
         "--urdf",
         type=Path,
-        default=ROOT / "urdf" / "openarm" / "openarm.urdf",
+        default=ROOT / "urdf" / "openarm" / "openarm_right.urdf",
     )
     ap.add_argument(
         "--ee",

@@ -159,7 +159,6 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(coiks_benchmark src/benchmark.cpp)
 add_executable(coiks_benchmark_path src/benchmark_path.cpp)
 
 ## Rename C++ executable without prefix
@@ -173,14 +172,6 @@ add_executable(coiks_benchmark_path src/benchmark_path.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(coiks_benchmark
-  ${catkin_LIBRARIES}
-  pinocchio::pinocchio 
-  ${coiks_LIBRARIES}
-  ${pkg_nlopt_LIBRARIES}
-  casadi
-)
-
 target_link_libraries(coiks_benchmark_path
   ${catkin_LIBRARIES}
   pinocchio::pinocchio 

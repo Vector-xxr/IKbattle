@@ -4,7 +4,7 @@
     <!-- 测试机器人编号 [0-15]：
          0:HSR 1:VS050 2:xArm6 3:IRB140 4:Jaco 5:UR5 6:UR10
          7:Gen3 8:iiwa 9:xArm7 10:Panda 11:Sawyer 12:Yumi 13:Fetch 14:Tiago
-         15:OpenArm（上半身 URDF，path 只控右臂；无 random 全量样本） -->
+         15:OpenArm（右臂专用 URDF openarm_right.urdf，7 DoF） -->
     <param name="robot_id" value="15"/>
     <!-- 路径跟踪：从 qinit CSV 取哪一行作为整条路径的初始种子（point_id） -->
     <param name="point_id" value="0"/>
@@ -12,7 +12,7 @@
     <!-- IK 求解器名称，常用选项：
          单求解器: coiks_invj / coiks_qp / coiks_nlo
          并发组合: coiks_invj_multi / coiks_invj_qp / coiks_invj_nlo / coiks_qp_nlo / coiks_all -->
-    <arg name="ik_solver" default="coiks_qp"/>
+    <arg name="ik_solver" default="coiks_nlo"/>
     <param name="ik_solver" value="$(arg ik_solver)" type="str"/>
 
     <!-- ========== 求解通用参数 ========== -->
@@ -27,8 +27,9 @@
     <!-- 多解选优模式: speed(最快) / distance(相对初值变化最小) / manipulability(可操作度最大) -->
     <param name="solve_mode" value="speed"/>
 
-    <!-- 是否同时跑 TRAC-IK 作为对比基线 -->
+    <!-- 是否同时跑 TRAC-IK / KDL 作为对比基线 -->
     <param name="tracik_enable" value="true"  type="bool"/>
+    <param name="kdl_enable" value="true"  type="bool"/>
 
     <!-- 调试打印位掩码 [CoIKS, TRAC-IK, KDL]，0 表示不逐条打印 -->
     <param name="print_all" value="0"/>

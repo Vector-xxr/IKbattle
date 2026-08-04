@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""用 Pinocchio + MeshCat 可视化 coiks_benchmark 基准数据。
+"""用 Pinocchio + MeshCat 可视化 coiks_benchmark 路径基准数据。
 
 模式:
-  - csv:    播放 data/path_robot_<id>.csv 连续末端轨迹（简易 IK）
-  - random: 交叉显示 qinit/targets 第 index..index+count-1 题
+  - csv:     播放 data/path_robot_<id>.csv 连续末端轨迹（简易 IK）
   - neutral: 中性位静态
 
 依赖::
@@ -13,9 +12,8 @@
 示例::
 
     cd coiks_benchmark
-    python3 scripts/viz_urdf.py --robot_id 7 --mode csv --index 0 --count 200
-    python3 scripts/viz_urdf.py --robot_id 15 --mode csv --index 0 --count 200 --fps 120
-    python3 scripts/viz_urdf.py --robot_id 7 --mode random --index 10 --count 5 --dt 0.5
+    python3 scripts/viz_urdf.py --robot_id 7 --mode csv --index 0 --fps 33
+    python3 scripts/viz_urdf.py --robot_id 15 --mode csv --index 0 --fps 120
     python3 scripts/viz_urdf.py --robot_id 1 --mode neutral
 """
 
@@ -34,7 +32,7 @@ ROOT = Path(__file__).resolve().parents[1]  # coiks_benchmark/
 URDF_ROOT = ROOT / "urdf"
 DATA_ROOT = ROOT / "data"
 
-# 与 benchmark.cpp 中 robot_id → URDF / 数据名一致
+# 与 benchmark_path.cpp 中 robot_id → URDF / 数据名一致
 ROBOTS = {
     0: ("toyota/hsr/hsr_arm.urdf", "hsr"),
     1: ("denso/vs050/vs050.urdf", "vs050"),
@@ -51,7 +49,7 @@ ROBOTS = {
     12: ("abb/yumi/yumi.urdf", "yumi"),
     13: ("fetch/fetch_arm.urdf", "fetch"),
     14: ("tiago/tiago.urdf", "tiago"),
-    15: ("openarm/openarm.urdf", "openarm"),
+    15: ("openarm/openarm_right.urdf", "openarm"),
 }
 
 OLD_MESH_PREFIXES = (
@@ -156,34 +154,6 @@ def load_qinit(name_key: str):
             raise ValueError(f"qinit 无关节列: {csv_path}")
         for row in reader:
             rows.append([float(row[i]) for i in q_cols])
-    return np.asarray(rows, dtype=float)
-
-
-def load_target_q(name_key: str, nq: int):
-    """读 targets 中位姿后的关节列 q1..qn。"""
-    import numpy as np
-
-    csv_path = DATA_ROOT / f"targets_robot_{name_key}_random_10000samples.csv"
-    if not csv_path.is_file():
-        raise FileNotFoundError(f"找不到 targets CSV: {csv_path}")
-
-    with csv_path.open(newline="") as f:
-        reader = csv.reader(f)
-        header = next(reader)
-        try:
-            q1_idx = header.index("q1")
-        except ValueError as e:
-            raise ValueError(
-                f"targets 缺少关节列 q1..（文件 {csv_path.name}，列={header}）"
-            ) from e
-        rows = []
-        for row in reader:
-            vals = [float(x) for x in row[q1_idx : q1_idx + nq]]
-            if len(vals) != nq:
-                raise ValueError(
-                    f"targets 关节数列不足 nq={nq}（文件 {csv_path.name}）"
-                )
-            rows.append(vals)
     return np.asarray(rows, dtype=float)
 
 
@@ -398,56 +368,15 @@ def run_path_animation(
     wait_exit()
 
 
-def run_random_toggle(
-    viz,
-    model,
-    name_key: str,
-    index: int,
-    count: int | None,
-    dt: float,
-):
-    import numpy as np
-
-    qinit = load_qinit(name_key)
-    q_goal = load_target_q(name_key, model.nq)
-    n = min(len(qinit), len(q_goal))
-    if len(qinit) != len(q_goal):
-        print(
-            f"[WARN] qinit 行数 {len(qinit)} 与 targets 行数 {len(q_goal)} 不一致，"
-            f"取 min={n}",
-            file=sys.stderr,
-        )
-    if qinit.shape[1] != model.nq:
-        raise ValueError(f"qinit 关节数 {qinit.shape[1]} != nq={model.nq}")
-
-    start, end, n_play = clamp_slice(index, count, n, default_count=20)
-    print(
-        f"[INFO] random 模式: {name_key} 题 [{start}, {end}) 共 {n_play} 道，"
-        f"题内 dt={dt}，跨题 2*dt={2 * dt}"
-    )
-
-    for i in range(start, end):
-        print(f"[q_init]  i={i}")
-        viz.display(np.asarray(qinit[i], dtype=float))
-        time.sleep(dt)
-
-        print(f"[target]  i={i}")
-        viz.display(np.asarray(q_goal[i], dtype=float))
-        time.sleep(2 * dt)
-
-    print("[INFO] random 播放结束")
-    wait_exit()
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="Pinocchio + MeshCat：可视化 path / 随机 IK 基准数据"
+        description="Pinocchio + MeshCat：可视化 path 路径基准数据"
     )
     ap.add_argument(
         "--robot_id",
         type=int,
         default=1,
-        help="机器人编号 0–15（与 launch 中 robot_id 一致），默认 1",
+        help="机器人编号 0–15（与 path launch 中 robot_id 一致），默认 1",
     )
     ap.add_argument(
         "--urdf",
@@ -458,33 +387,27 @@ def main() -> int:
     ap.add_argument(
         "--mode",
         type=str,
-        choices=("neutral", "csv", "random"),
+        choices=("neutral", "csv"),
         default="csv",
-        help="neutral | csv(path 轨迹) | random(qinit/target 交叉)",
+        help="neutral | csv(path 轨迹)",
     )
     ap.add_argument(
         "--index",
         type=int,
         default=0,
-        help="起始下标：csv=路径点，random=题号，默认 0",
+        help="起始下标：csv=路径点，默认 0",
     )
     ap.add_argument(
         "--count",
         type=int,
         default=None,
-        help="连续条数：csv 不写则从 index 播到文件末尾；random 默认 min(20,剩余)",
-    )
-    ap.add_argument(
-        "--dt",
-        type=float,
-        default=None,
-        help="时间间隔秒：csv 默认 0.03；random 默认 0.5（跨题为 2*dt）",
+        help="连续条数：csv 不写则从 index 播到文件末尾",
     )
     ap.add_argument(
         "--fps",
         type=float,
         default=None,
-        help="播放帧率（与 --dt 互斥优先）：csv 下 --fps 120 等价 dt=1/120",
+        help="播放帧率（csv 默认 33，约等于原 0.03s 间隔）",
     )
     ap.add_argument(
         "--no-open",
@@ -493,15 +416,12 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    if args.fps is not None:
-        if args.fps <= 0:
-            print("[ERROR] --fps 须 > 0", file=sys.stderr)
-            return 1
-        if args.dt is not None:
-            print("[WARN] 同时指定 --fps 与 --dt，以 --fps 为准", file=sys.stderr)
-        args.dt = 1.0 / args.fps
-    elif args.dt is None:
-        args.dt = 0.5 if args.mode == "random" else 0.03
+    if args.fps is None:
+        args.fps = 33.0
+    if args.fps <= 0:
+        print("[ERROR] --fps 须 > 0", file=sys.stderr)
+        return 1
+    args.dt = 1.0 / args.fps
 
     try:
         import pinocchio as pin
@@ -521,9 +441,9 @@ def main() -> int:
         print(e, file=sys.stderr)
         return 1
 
-    if args.mode in ("csv", "random") and name_key is None:
+    if args.mode == "csv" and name_key is None:
         print(
-            "[ERROR] csv/random 模式需要有效 --robot_id 以定位 data/ CSV",
+            "[ERROR] csv 模式需要有效 --robot_id 以定位 data/ CSV",
             file=sys.stderr,
         )
         return 1
@@ -558,7 +478,7 @@ def main() -> int:
             viz.display(q)
             print(f"[INFO] q = {q}")
             wait_exit()
-        elif args.mode == "csv":
+        else:
             run_path_animation(
                 viz,
                 model,
@@ -569,10 +489,6 @@ def main() -> int:
                 args.index,
                 args.count,
                 args.dt,
-            )
-        else:
-            run_random_toggle(
-                viz, model, name_key, args.index, args.count, args.dt
             )
     except (FileNotFoundError, ValueError, IndexError) as e:
         print(f"[ERROR] {e}", file=sys.stderr)

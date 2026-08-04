@@ -54,7 +54,7 @@ bash /coiks/docker/build_ws.sh
 
 ```text
 [完成] 工作空间编译成功。示例:
-  roslaunch coiks_benchmark coiks_benchmark.launch
+  roslaunch coiks_benchmark coiks_benchmark_path.launch
 ```
 
 然后在**同一容器 shell**中：
@@ -62,7 +62,7 @@ bash /coiks/docker/build_ws.sh
 ```bash
 source /root/catkin_ws/devel/setup.bash   # 每个新 shell 执行一次
 
-roslaunch coiks_benchmark coiks_benchmark.launch
+roslaunch coiks_benchmark coiks_benchmark_path.launch
 ```
 
 NLO 相关：默认线性求解器可能是 `ma57`（需 HSL）。无授权时可在 launch 中设置：
